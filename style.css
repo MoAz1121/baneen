@@ -95,11 +95,13 @@ canvas#sky {
 }
 
 
+.card-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
   text-align: center;
+  width: 100%;
 }
 
 .label {
@@ -121,9 +123,11 @@ canvas#sky {
   color: var(--text-main);
   letter-spacing: 0.01em;
   min-height: 80px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
