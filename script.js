@@ -1,17 +1,20 @@
 const reasons = [
-  "The way you laugh without holding anything back.",
-  "How you make ordinary moments feel like they matter.",
-  "The patience you have, even when I'm difficult.",
-  "The way you think — quietly, carefully, honestly.",
-  "How safe I feel when I'm with you.",
-  "The small things you notice that nobody else does.",
-  "How you love the things you love, fully and without apology.",
-  "The warmth you carry into every room.",
-  "How you always know what to say, or when to say nothing.",
-  "The way you look at me like I'm enough.",
-  "Your kindness — it's genuine, not performed.",
-  "How you make me want to be more present.",
-  "The fact that you exist, and somehow you're here.",
+  "I love the way you let me yap",
+  "I love how your presence alone is enough to make me forget all my worries",
+  "I love how you make the best come out of me",
+  "I love how happy I am whenever I am with you",
+  "I love how sweet you are",
+  "I love how kind you are",
+  "I love how incredibly gorgeous you are (straight up divine)",
+  "I love the way you love me",
+  "I love how full of love you are",
+  "I love how blessed I feel to be with you",
+  "I love how safe I feel when I am with you",
+  "I love how comfortable you make me feel",
+  "I love how you do not rush me",
+  "I love how being around you feels so natural",
+  "I love how nothing feels forced",
+  "I love how you make me feel understood without judgement"
 ];
 
 const glows = [
@@ -28,6 +31,9 @@ const glows = [
   "100, 160, 248",
   "118, 172, 252",
   "128, 178, 255",
+  "112, 168, 246",
+  "122, 176, 250",
+  "108, 162, 244"
 ];
 
 let index = -1;
