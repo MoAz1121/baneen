@@ -14,6 +14,22 @@ const reasons = [
   "The fact that you exist, and somehow you're here.",
 ];
 
+const glows = [
+  "110, 160, 255",
+  "130, 180, 245",
+  "100, 150, 240",
+  "120, 170, 255",
+  "90, 155, 235",
+  "140, 185, 255",
+  "105, 165, 250",
+  "125, 175, 245",
+  "115, 158, 240",
+  "135, 182, 255",
+  "100, 160, 248",
+  "118, 172, 252",
+  "128, 178, 255",
+];
+
 let index = -1;
 let transitioning = false;
 
@@ -21,8 +37,15 @@ const label = document.getElementById('label');
 const reason = document.getElementById('reason');
 const btn = document.getElementById('btn');
 const counter = document.getElementById('counter');
+const card = document.getElementById('card');
 
-function setReason(text, labelText, counterText, btnText) {
+function setGlow(i) {
+  const color = i >= 0 && i < glows.length ? glows[i] : "130, 170, 255";
+  card.style.setProperty('--glow-color', color);
+  document.documentElement.style.setProperty('--glow-color', color);
+}
+
+function setReason(text, labelText, counterText, btnText, glowIndex) {
   if (transitioning) return;
   transitioning = true;
 
@@ -33,6 +56,7 @@ function setReason(text, labelText, counterText, btnText) {
     reason.textContent = text;
     counter.textContent = counterText || '';
     btn.textContent = btnText || 'next';
+    if (glowIndex !== undefined) setGlow(glowIndex);
 
     reason.classList.remove('fade-out');
     reason.classList.add('fade-in');
@@ -44,17 +68,12 @@ function setReason(text, labelText, counterText, btnText) {
   }, 350);
 }
 
-btn.addEventListener('click', () => {
+function next() {
   if (transitioning) return;
 
   if (index === -1) {
     index = 0;
-    setReason(
-      reasons[0],
-      'reasons why i love you',
-      `1 of ${reasons.length}`,
-      'next'
-    );
+    setReason(reasons[0], 'reasons why i love you', `1 of ${reasons.length}`, 'next', 0);
     return;
   }
 
@@ -65,19 +84,34 @@ btn.addEventListener('click', () => {
       reasons[index],
       'reasons why i love you',
       `${index + 1} of ${reasons.length}`,
-      isLast ? 'one more thing' : 'next'
+      isLast ? 'one more thing' : 'next',
+      index
     );
     return;
   }
 
   index = -1;
-  setReason(
-    'I could go on forever.',
-    '',
-    '',
-    'start over'
-  );
-});
+  setReason('I could go on forever.', '', '', 'start over');
+  document.documentElement.style.setProperty('--glow-color', '130, 170, 255');
+}
+
+btn.addEventListener('click', next);
+
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
+    next();
+  }
+}, { passive: true });
 
 (function drawSky() {
   const canvas = document.getElementById('sky');
