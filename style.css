@@ -188,3 +188,19 @@ canvas#particles {
   min-height: 14px;
   transition: color 0.6s ease;
 }
+
+.typewriter-link {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(160, 185, 230, 0.3);
+  text-decoration: none;
+  text-transform: lowercase;
+  transition: color 0.3s ease;
+  margin-top: 4px;
+}
+
+.typewriter-link:hover {
+  color: rgba(180, 210, 255, 0.65);
+}
