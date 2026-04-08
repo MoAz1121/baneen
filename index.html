@@ -11,7 +11,24 @@
 </head>
 <body>
   <canvas id="sky"></canvas>
-  <div class="scene">
+  <canvas id="particles"></canvas>
+
+  <!-- Intro screen -->
+  <div id="intro">
+    <div id="name-wrap">
+      <span class="b-letter" data-i="0">B</span>
+      <span class="b-letter" data-i="1">a</span>
+      <span class="b-letter" data-i="2">n</span>
+      <span class="b-letter" data-i="3">e</span>
+      <span class="b-letter" data-i="4">e</span>
+      <span class="b-letter" data-i="5">n</span>
+    </div>
+    <p id="tagline">my favourite person ♡</p>
+    <p id="tap-hint">tap anywhere</p>
+  </div>
+
+  <!-- Main card -->
+  <div class="scene" id="mainScene">
     <div class="card" id="card">
       <p class="title-name">Reasons why I love you, Baneen❤️</p>
       <div class="card-inner" id="cardInner">
@@ -23,6 +40,7 @@
     </div>
     <p class="counter" id="counter"></p>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
