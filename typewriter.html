@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For my princess</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       ✏️  JOUW TEKST — pas alleen dit blok aan
+       Elke regel tussen aanhalingstekens is één zin.
+       De typewriter typt ze één voor één uit.
+       Voeg zoveel regels toe als je wil.
+       ============================================================ */
+    /* ZIE JAVASCRIPT ONDERAAN — zoek naar: YOUR TEXT HERE */
+  </style>
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+<div id="stage">
+  <div id="text-wrap">
+    <span id="output"></span><span id="cursor">|</span>
+  </div>
+  <div id="nav">
+    <a href="index.html" id="back-link">← back</a>
+  </div>
+</div>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%; width: 100%; overflow: hidden;
+  background: #080c1a;
+  font-family: 'Cormorant Garamond', serif;
+}
+
+canvas#sky {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
+#stage {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh;
+  padding: 48px 32px;
+}
+
+#text-wrap {
+  max-width: min(640px, 90vw);
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.85;
+  color: #dde8ff;
+  text-align: center;
+  text-shadow: 0 0 40px rgba(140, 180, 255, 0.15);
+  letter-spacing: 0.02em;
+}
+
+#cursor {
+  display: inline-block;
+  color: rgba(180, 210, 255, 0.6);
+  animation: blink 1s step-start infinite;
+  margin-left: 2px;
+  font-style: normal;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+#nav {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+#nav.show { opacity: 1; }
+
+#back-link {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(160, 185, 230, 0.35);
+  text-decoration: none;
+  text-transform: lowercase;
+  transition: color 0.2s;
+}
+#back-link:hover { color: rgba(180, 210, 255, 0.65); }
+</style>
+
+<script>
+/* ============================================================
+   ✏️  JOUW TEKST — pas dit aan
+   Elke regel is één zin die getypt wordt.
+   Na elke zin is er een korte pauze voor de volgende begint.
+   ============================================================ */
+const lines = [
+  "I don't really know how to start this.",
+  "But I think that's kind of the point.",
+  "Some things don't need a perfect beginning.",
+  "They just need to be said.",
+  "So here it is.",
+  "You are the best thing that has happened to me.",
+  "And I mean that in the quietest, most honest way possible.",
+  "Not the loud kind of love you see in movies.",
+  "The kind that just... fits.",
+  "Like I didn't know something was missing until you were there.",
+  "I love you, Baneen.",
+  "More than these words can hold.",
+];
+/* ============================================================
+   ✏️  INSTELLINGEN (optioneel aanpassen)
+   typingSpeed  = hoe snel letters verschijnen (ms per letter)
+   pauseAfter   = pauze na elke zin (ms)
+   pauseBetween = pauze tussen zinnen (ms)
+   ============================================================ */
+const typingSpeed  = 38;   // ms per letter
+const pauseAfter   = 900;  // ms na punt/uitroepteken
+const pauseBetween = 400;  // ms tussen zinnen
+
+// ── Engine (niet aanpassen) ─────────────────────────────────
+const output = document.getElementById('output');
+const nav    = document.getElementById('nav');
+
+async function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function typeLine(text) {
+  for (const ch of text) {
+    output.textContent += ch;
+    await sleep(typingSpeed + Math.random() * 18 - 9);
+  }
+}
+
+async function run() {
+  await sleep(900);
+  for (let i = 0; i < lines.length; i++) {
+    await typeLine(lines[i]);
+    await sleep(pauseAfter);
+    if (i < lines.length - 1) {
+      output.textContent += ' ';
+      await sleep(pauseBetween);
+    }
+  }
+  nav.classList.add('show');
+}
+
+run();
+
+// ── Stars ───────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 8000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 0.9 + 0.2,
+        a: Math.random() * 0.55 + 0.1,
+        speed: Math.random() * 0.004 + 0.001,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const grad = ctx.createRadialGradient(
+      canvas.width * 0.5, canvas.height * 0.35, 0,
+      canvas.width * 0.5, canvas.height * 0.35, canvas.width * 0.65
+    );
+    grad.addColorStop(0, 'rgba(20, 35, 72, 0.55)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (const s of stars) {
+      const alpha = s.a * (0.6 + 0.4 * Math.sin(t * s.speed * 60 + s.phase));
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`; ctx.fill();
+    }
+    t += 0.016;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize(); draw();
+})();
+</script>
+</body>
+</html>
