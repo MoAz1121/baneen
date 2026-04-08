@@ -176,3 +176,15 @@ canvas#particles {
 }
 
 @media (max-width: 400px) { .card { padding: 40px 28px 36px; } }
+
+.timer {
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: rgba(180, 200, 235, 0.35);
+  text-align: center;
+  margin-top: 8px;
+  min-height: 14px;
+  transition: color 0.6s ease;
+}
