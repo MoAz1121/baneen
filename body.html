@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>For my princess</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,7 +13,6 @@
 <canvas id="sky"></canvas>
 <canvas id="fx"></canvas>
 
-<!-- floating glow label -->
 <div id="glow-label"></div>
 
 <div id="stage">
@@ -55,19 +54,31 @@ canvas#fx { z-index: 2; }
   transition: opacity 0.3s ease, transform 0.3s ease;
   white-space: nowrap;
 }
-#glow-label.show {
-  opacity: 1;
-  transform: translateY(-6px);
-}
-#glow-label.hide {
-  opacity: 0;
-  transform: translateY(-14px);
-}
+#glow-label.show { opacity: 1; transform: translateY(-6px); }
+#glow-label.hide { opacity: 0; transform: translateY(-14px); }
 
-#stage { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px 24px 64px; gap: 16px; }
+#stage {
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px 24px 64px; gap: 16px;
+}
 #page-title { font-weight: 300; font-size: 11px; letter-spacing: 0.22em; text-transform: lowercase; color: rgba(180, 200, 235, 0.4); }
 #main { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
-#figure { cursor: pointer; filter: drop-shadow(0 0 24px rgba(140,180,255,0.12)); transition: filter 0.4s ease; }
+
+#figure {
+  cursor: pointer;
+  filter: drop-shadow(0 0 24px rgba(140,180,255,0.12));
+  transition: filter 0.4s ease;
+  /* Fix for mobile: prevent text selection and touch callout */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Make figure responsive on small screens */
+  max-width: 45vw;
+  height: auto;
+}
 
 #message-wrap { width: 260px; min-height: 160px; display: flex; align-items: center; justify-content: center; }
 #message-hint p { font-weight: 300; font-size: 11px; letter-spacing: 0.18em; text-transform: lowercase; color: rgba(160, 185, 230, 0.22); }
@@ -99,9 +110,422 @@ canvas#fx { z-index: 2; }
 #back-link { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); font-weight: 300; font-size: 11px; letter-spacing: 0.2em; text-transform: lowercase; color: rgba(160, 185, 230, 0.28); text-decoration: none; transition: color 0.2s; }
 #back-link:hover { color: rgba(180, 210, 255, 0.6); }
 
-@media (max-width: 540px) { #main { flex-direction: column; gap: 20px; } #message-wrap { width: 90vw; min-height: 100px; } }
+@media (max-width: 540px) {
+  #main { flex-direction: column; gap: 20px; }
+  #message-wrap { width: 90vw; min-height: 100px; }
+  #figure { max-width: 55vw; }
+  #message-text { font-size: clamp(15px, 4.5vw, 20px); }
+}
+
+@media (max-height: 700px) {
+  #stage { justify-content: flex-start; padding-top: 16px; }
+  #figure { max-width: 38vw; }
+}
 </style>
 
+<script>
+
+const parts = {
+  hair: {
+    label: "her hair",
+    text: "That long black hair is the first thing I noticed. Je bent zo elegant en divine princess. Every single second I miss the time I had my fingers running through your hair",
+    whisper: "she doesn't know how often I think about it"
+  },
+  face: {
+    label: "her face",
+    text: "You have no idea how beautiful you are. That is part of what makes you so beautiful.",
+    whisper: "I could look at her forever and never get tired"
+  },
+  shoulders: {
+    label: "her shoulders",
+    text: "Je hebt het de afgelopen jaren zo zwaar gehad, en toch loop je met een rechte rug door. You are so strong my baby, I love kissing your shoulders",
+    whisper: "she holds so much and never complains"
+  },
+  arms: {
+    label: "her arms",
+    text: "I love her arms more than she knows. Soft, warm, and perfect... al helemaal wanneer ze mij vasthouden.",
+    whisper: "being held by her feels like home"
+  },
+  waist: {
+    label: "her waist",
+    text: "The way her body curves is something I find myself thinking about more than I probably should.",
+    whisper: "She was sculpted by god himself. No other explanation possible."
+  },
+  hips: {
+    label: "her hips",
+    text: "She was made beautifully. Every curve of her is exactly right, even if she cannot see it yet.",
+    whisper: "I wish she saw herself the way I do"
+  },
+  thighs: {
+    label: "her thighs",
+    text: "I love her thighs. I love them so much. They are one of my favourite things about her and I mean that with my whole heart.",
+    whisper: "she should never be doubtuful about them. ever."
+  },
+  legs: {
+    label: "her legs",
+    text: "She walks and I forget what I was thinking about. It is that simple.",
+    whisper: "everything about her moves me"
+  },
+};
+
+// ── Glow label ───────────────────────────────────────────────
+const glowLabel = document.getElementById('glow-label');
+let labelTimer = null;
+
+function showGlowLabel(text, screenX, screenY) {
+  clearTimeout(labelTimer);
+  glowLabel.textContent = text;
+  glowLabel.style.left = screenX + 'px';
+  glowLabel.style.top  = (screenY - 32) + 'px';
+  glowLabel.style.transform = 'translate(-50%, 0) translateY(0px)';
+  glowLabel.classList.remove('hide');
+  glowLabel.classList.add('show');
+  labelTimer = setTimeout(() => {
+    glowLabel.classList.remove('show');
+    glowLabel.classList.add('hide');
+  }, 1800);
+}
+
+// ── Particle system ──────────────────────────────────────────
+const fxCanvas = document.getElementById('fx');
+const fxCtx = fxCanvas.getContext('2d');
+let particles = [];
+let fxFrame = null;
+
+function resizeFx() { fxCanvas.width = window.innerWidth; fxCanvas.height = window.innerHeight; }
+resizeFx();
+window.addEventListener('resize', resizeFx);
+
+function spawnParticles(wx, wy, type) {
+  const configs = {
+    hair:      { color: '200,220,255', count: 30, spread: 0.8, rise: 2.2 },
+    face:      { color: '255,200,230', count: 18, spread: 0.6, rise: 1.8 },
+    shoulders: { color: '180,210,255', count: 20, spread: 1.0, rise: 1.5 },
+    arms:      { color: '160,200,255', count: 22, spread: 0.9, rise: 1.6 },
+    waist:     { color: '200,180,255', count: 20, spread: 0.8, rise: 1.4 },
+    hips:      { color: '220,180,255', count: 24, spread: 1.1, rise: 1.4 },
+    thighs:    { color: '210,170,255', count: 28, spread: 1.0, rise: 1.3 },
+    legs:      { color: '180,200,255', count: 20, spread: 0.9, rise: 1.5 },
+  };
+  const cfg = configs[type] || { color: '180,210,255', count: 20, spread: 0.8, rise: 1.5 };
+  for (let i = 0; i < cfg.count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (Math.random() * 1.5 + 0.4) * cfg.spread;
+    particles.push({ x: wx, y: wy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - cfg.rise, r: Math.random() * 2 + 0.5, life: 1, decay: Math.random() * 0.014 + 0.006, color: cfg.color });
+  }
+  if (type === 'hair') {
+    for (let i = 0; i < 18; i++) {
+      particles.push({ x: wx + (Math.random() - 0.5) * 40, y: wy - 20, vx: (Math.random() - 0.5) * 0.6, vy: Math.random() * 1.5 + 0.5, r: Math.random() * 1.2 + 0.3, life: 1, decay: Math.random() * 0.01 + 0.004, color: '160,180,220' });
+    }
+  }
+  if (!fxFrame) animFx();
+}
+
+function animFx() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    fxCtx.beginPath(); fxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    fxCtx.fillStyle = `rgba(${p.color}, ${p.life * 0.8})`; fxCtx.fill();
+    p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.life -= p.decay;
+  }
+  if (particles.length > 0) fxFrame = requestAnimationFrame(animFx);
+  else fxFrame = null;
+}
+
+// ── Figure canvas ────────────────────────────────────────────
+const fig = document.getElementById('figure');
+const ctx = fig.getContext('2d');
+const W = fig.width, H = fig.height;
+const zones = [];
+let hoveredZone = null;
+let activeZone = null;
+let glowAnim = 0;
+let glowDir = 1;
+let heartT = 0;
+
+function buildZones() {
+  zones.length = 0;
+
+  const hair = new Path2D();
+  hair.ellipse(110, 58, 36, 42, 0, 0, Math.PI * 2);
+  hair.moveTo(74, 40); hair.bezierCurveTo(55, 80, 50, 160, 58, 260); hair.lineTo(68, 260); hair.bezierCurveTo(62, 160, 66, 80, 82, 45);
+  hair.moveTo(146, 40); hair.bezierCurveTo(165, 80, 166, 160, 158, 260); hair.lineTo(148, 260); hair.bezierCurveTo(154, 160, 154, 80, 138, 45);
+  zones.push({ key: 'hair', path: hair, glow: '200,220,255' });
+
+  const face = new Path2D();
+  face.ellipse(110, 58, 30, 36, 0, 0, Math.PI * 2);
+  zones.push({ key: 'face', path: face, glow: '255,200,230' });
+
+  const shoulders = new Path2D();
+  shoulders.moveTo(68, 108); shoulders.bezierCurveTo(60, 104, 52, 108, 50, 118); shoulders.lineTo(54, 128);
+  shoulders.bezierCurveTo(66, 120, 82, 116, 110, 116); shoulders.bezierCurveTo(138, 116, 154, 120, 166, 128); shoulders.lineTo(170, 118);
+  shoulders.bezierCurveTo(168, 108, 160, 104, 152, 108); shoulders.bezierCurveTo(140, 100, 126, 98, 110, 98); shoulders.bezierCurveTo(94, 98, 80, 100, 68, 108);
+  zones.push({ key: 'shoulders', path: shoulders, glow: '180,210,255' });
+
+  const lArm = new Path2D();
+  lArm.moveTo(54, 128); lArm.bezierCurveTo(46, 148, 40, 180, 38, 220); lArm.bezierCurveTo(37, 240, 38, 255, 42, 265);
+  lArm.bezierCurveTo(50, 255, 56, 240, 58, 220); lArm.bezierCurveTo(60, 185, 64, 152, 70, 132);
+  zones.push({ key: 'arms', path: lArm, glow: '160,200,255' });
+
+  const rArm = new Path2D();
+  rArm.moveTo(166, 128); rArm.bezierCurveTo(174, 148, 180, 180, 182, 220); rArm.bezierCurveTo(183, 240, 182, 255, 178, 265);
+  rArm.bezierCurveTo(170, 255, 164, 240, 162, 220); rArm.bezierCurveTo(160, 185, 156, 152, 150, 132);
+  zones.push({ key: 'arms', path: rArm, glow: '160,200,255' });
+
+  const waist = new Path2D();
+  waist.moveTo(70, 132); waist.bezierCurveTo(66, 160, 64, 190, 68, 210); waist.bezierCurveTo(75, 222, 90, 228, 110, 228);
+  waist.bezierCurveTo(130, 228, 145, 222, 152, 210); waist.bezierCurveTo(156, 190, 154, 160, 150, 132);
+  waist.bezierCurveTo(138, 122, 126, 118, 110, 118); waist.bezierCurveTo(94, 118, 82, 122, 70, 132);
+  zones.push({ key: 'waist', path: waist, glow: '200,180,255' });
+
+  const hips = new Path2D();
+  hips.moveTo(68, 210); hips.bezierCurveTo(58, 228, 55, 248, 60, 268); hips.bezierCurveTo(70, 282, 88, 290, 110, 290);
+  hips.bezierCurveTo(132, 290, 150, 282, 160, 268); hips.bezierCurveTo(165, 248, 162, 228, 152, 210);
+  hips.bezierCurveTo(145, 222, 130, 228, 110, 228); hips.bezierCurveTo(90, 228, 75, 222, 68, 210);
+  zones.push({ key: 'hips', path: hips, glow: '220,180,255' });
+
+  const lThigh = new Path2D();
+  lThigh.moveTo(60, 268); lThigh.bezierCurveTo(56, 295, 56, 330, 60, 360); lThigh.lineTo(88, 360);
+  lThigh.bezierCurveTo(90, 330, 90, 295, 90, 268); lThigh.bezierCurveTo(80, 276, 68, 278, 60, 268);
+  zones.push({ key: 'thighs', path: lThigh, glow: '210,170,255' });
+
+  const rThigh = new Path2D();
+  rThigh.moveTo(160, 268); rThigh.bezierCurveTo(164, 295, 164, 330, 160, 360); rThigh.lineTo(132, 360);
+  rThigh.bezierCurveTo(130, 330, 130, 295, 130, 268); rThigh.bezierCurveTo(140, 276, 152, 278, 160, 268);
+  zones.push({ key: 'thighs', path: rThigh, glow: '210,170,255' });
+
+  const lLeg = new Path2D();
+  lLeg.moveTo(60, 360); lLeg.bezierCurveTo(58, 390, 60, 420, 64, 450); lLeg.bezierCurveTo(66, 465, 68, 475, 70, 482);
+  lLeg.lineTo(82, 482); lLeg.bezierCurveTo(84, 472, 86, 460, 86, 450); lLeg.bezierCurveTo(88, 420, 88, 390, 88, 360);
+  zones.push({ key: 'legs', path: lLeg, glow: '180,200,255' });
+
+  const rLeg = new Path2D();
+  rLeg.moveTo(160, 360); rLeg.bezierCurveTo(162, 390, 160, 420, 156, 450); rLeg.bezierCurveTo(154, 465, 152, 475, 150, 482);
+  rLeg.lineTo(138, 482); rLeg.bezierCurveTo(136, 472, 134, 460, 132, 450); rLeg.bezierCurveTo(130, 420, 132, 390, 132, 360);
+  zones.push({ key: 'legs', path: rLeg, glow: '180,200,255' });
+}
+
+// ── Draw heart ───────────────────────────────────────────────
+function drawHeart(cx, cy, size, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(255,160,180,1)';
+  ctx.shadowColor = 'rgba(255,120,160,0.8)';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + size * 0.3);
+  ctx.bezierCurveTo(cx, cy, cx - size, cy, cx - size, cy - size * 0.5);
+  ctx.bezierCurveTo(cx - size, cy - size * 1.2, cx, cy - size * 1.2, cx, cy - size * 0.5);
+  ctx.bezierCurveTo(cx, cy - size * 1.2, cx + size, cy - size * 1.2, cx + size, cy - size * 0.5);
+  ctx.bezierCurveTo(cx + size, cy, cx, cy, cx, cy + size * 0.3);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFigure() {
+  ctx.clearRect(0, 0, W, H);
+  heartT += 0.04;
+
+  if (activeZone) {
+    glowAnim += 0.04 * glowDir;
+    if (glowAnim > 1) { glowAnim = 1; glowDir = -1; }
+    if (glowAnim < 0.3) { glowAnim = 0.3; glowDir = 1; }
+  }
+
+  const hairT_local = heartT * 0.45;
+  const hairWave  = Math.sin(hairT_local) * 3;
+  const hairWave2 = Math.sin(hairT_local * 0.7 + 1) * 2;
+  const isHairActive = activeZone === 'hair';
+  const isHairHover  = hoveredZone === 'hair';
+
+  ctx.beginPath();
+  ctx.moveTo(80, 30);
+  ctx.bezierCurveTo(68 + hairWave, 80, 62 + hairWave2, 160, 66 + hairWave, 290);
+  ctx.bezierCurveTo(67 + hairWave2, 320, 68, 340, 70, 360);
+  ctx.strokeStyle = isHairActive ? `rgba(200,220,255,${0.55 + glowAnim * 0.3})` : isHairHover ? 'rgba(200,220,255,0.5)' : 'rgba(160,190,240,0.38)';
+  ctx.lineWidth = isHairActive ? 3.5 : 2.5; ctx.lineCap = 'round';
+  if (isHairActive) { ctx.shadowColor = 'rgba(200,220,255,0.8)'; ctx.shadowBlur = 16; }
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.moveTo(140, 30);
+  ctx.bezierCurveTo(152 - hairWave, 80, 158 - hairWave2, 160, 154 - hairWave, 290);
+  ctx.bezierCurveTo(153 - hairWave2, 320, 152, 340, 150, 360);
+  ctx.strokeStyle = isHairActive ? `rgba(200,220,255,${0.55 + glowAnim * 0.3})` : isHairHover ? 'rgba(200,220,255,0.5)' : 'rgba(160,190,240,0.38)';
+  ctx.lineWidth = isHairActive ? 3.5 : 2.5;
+  if (isHairActive) { ctx.shadowColor = 'rgba(200,220,255,0.8)'; ctx.shadowBlur = 16; }
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  for (let s = 0; s < 4; s++) {
+    const ox = (s - 1.5) * 8;
+    const wave = Math.sin(hairT_local + s * 0.8) * 2;
+    ctx.beginPath(); ctx.moveTo(75 + ox, 50); ctx.bezierCurveTo(70 + ox + wave, 130, 65 + ox, 220, 68 + ox + wave, 310);
+    ctx.strokeStyle = `rgba(140,170,220,${isHairActive ? 0.28 + glowAnim * 0.15 : 0.18})`; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(145 - ox, 50); ctx.bezierCurveTo(150 - ox - wave, 130, 155 - ox, 220, 152 - ox - wave, 310);
+    ctx.strokeStyle = `rgba(140,170,220,${isHairActive ? 0.28 + glowAnim * 0.15 : 0.18})`; ctx.lineWidth = 1.2; ctx.stroke();
+  }
+
+  const strokeBase = 'rgba(180,210,255,0.32)';
+  for (const z of zones) {
+    const isActive = activeZone === z.key;
+    const isHover  = hoveredZone === z.key;
+    const alpha    = isActive ? 0.18 + glowAnim * 0.12 : isHover ? 0.14 : 0.08;
+    if (isActive) { ctx.shadowColor = `rgba(${z.glow},0.7)`; ctx.shadowBlur = 20 + glowAnim * 12; }
+    ctx.fillStyle = `rgba(${z.glow},${alpha})`; ctx.fill(z.path);
+    ctx.strokeStyle = isActive ? `rgba(${z.glow},${0.6 + glowAnim * 0.3})` : isHover ? `rgba(${z.glow},0.5)` : strokeBase;
+    ctx.lineWidth = isActive ? 1.8 : 1; ctx.stroke(z.path);
+    ctx.shadowBlur = 0;
+  }
+
+  const heartBeat = Math.sin(heartT * 2.2);
+  const heartBeat2 = Math.sin(heartT * 2.2 * 2);
+  const pulse = heartBeat > 0.6 ? 1 + heartBeat * 0.18 : heartBeat2 > 0.8 ? 1 + heartBeat2 * 0.10 : 1;
+  const heartSize = 5.5 * pulse;
+  const heartAlpha = 0.55 + Math.max(0, heartBeat) * 0.3;
+  drawHeart(110, 148, heartSize, heartAlpha);
+
+  requestAnimationFrame(drawFigure);
+}
+
+// ── Hit testing ──────────────────────────────────────────────
+function getPos(e) {
+  const rect = fig.getBoundingClientRect();
+  // Use fig.width / fig.height (internal canvas resolution) vs rendered size
+  const scaleX = fig.width / rect.width;
+  const scaleY = fig.height / rect.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY,
+    screenX: clientX,
+    screenY: clientY
+  };
+}
+
+function hitTest(x, y) {
+  for (let i = zones.length - 1; i >= 0; i--) {
+    if (ctx.isPointInPath(zones[i].path, x, y)) return zones[i];
+  }
+  return null;
+}
+
+fig.addEventListener('mousemove', e => {
+  const { x, y } = getPos(e);
+  const z = hitTest(x, y);
+  hoveredZone = z ? z.key : null;
+  fig.style.cursor = z ? 'pointer' : 'default';
+});
+fig.addEventListener('mouseleave', () => { hoveredZone = null; });
+
+// ── Typewriter ───────────────────────────────────────────────
+let typing = false;
+async function typeText(el, text, speed = 32) {
+  el.textContent = ''; typing = true;
+  for (const ch of text) {
+    if (!typing) break;
+    el.textContent += ch;
+    await new Promise(r => setTimeout(r, speed + Math.random() * 16 - 8));
+  }
+  typing = false;
+}
+
+// ── Click / tap handler ──────────────────────────────────────
+const hint      = document.getElementById('message-hint');
+const box       = document.getElementById('message-box');
+const labelEl   = document.getElementById('message-label');
+const msgText   = document.getElementById('message-text');
+const msgSecond = document.getElementById('message-second');
+
+function showPart(key, wx, wy, screenX, screenY) {
+  const data = parts[key];
+  if (!data) return;
+
+  activeZone = key; glowAnim = 0.3; glowDir = 1;
+
+  const rect = fig.getBoundingClientRect();
+  spawnParticles(rect.left + wx * (rect.width / fig.width), rect.top + wy * (rect.height / fig.height), key);
+
+  showGlowLabel(data.label, screenX, screenY);
+
+  hint.style.opacity = '0';
+  box.classList.add('hidden');
+  msgSecond.classList.remove('show');
+  typing = false;
+
+  setTimeout(() => {
+    labelEl.textContent = data.label;
+    msgText.textContent = '';
+    msgSecond.textContent = '';
+    box.classList.remove('hidden');
+    typeText(msgText, data.text, 34).then(() => {
+      if (data.whisper) {
+        setTimeout(() => {
+          msgSecond.textContent = data.whisper;
+          msgSecond.classList.add('show');
+        }, 600);
+      }
+    });
+  }, 150);
+}
+
+fig.addEventListener('click', e => {
+  const { x, y, screenX, screenY } = getPos(e);
+  const z = hitTest(x, y);
+  if (z) showPart(z.key, x, y, screenX, screenY);
+});
+
+fig.addEventListener('touchstart', e => {
+  e.preventDefault();
+}, { passive: false });
+
+fig.addEventListener('touchend', e => {
+  e.preventDefault();
+  // Use changedTouches for touchend (touches list is empty on touchend)
+  const touch = e.changedTouches[0];
+  const rect = fig.getBoundingClientRect();
+  const scaleX = fig.width / rect.width;
+  const scaleY = fig.height / rect.height;
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
+  const screenX = touch.clientX;
+  const screenY = touch.clientY;
+  const z = hitTest(x, y);
+  if (z) showPart(z.key, x, y, screenX, screenY);
+}, { passive: false });
+
+// ── Stars ────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('sky');
+  const ctx2 = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight; stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 8000);
+    for (let i = 0; i < count; i++) stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 0.9 + 0.2, a: Math.random() * 0.55 + 0.1, speed: Math.random() * 0.004 + 0.001, phase: Math.random() * Math.PI * 2 });
+  }
+  let t = 0;
+  function draw() {
+    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    const grad = ctx2.createRadialGradient(canvas.width * 0.5, canvas.height * 0.35, 0, canvas.width * 0.5, canvas.height * 0.35, canvas.width * 0.65);
+    grad.addColorStop(0, 'rgba(20, 35, 72, 0.55)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx2.fillStyle = grad; ctx2.fillRect(0, 0, canvas.width, canvas.height);
+    for (const s of stars) {
+      const alpha = s.a * (0.6 + 0.4 * Math.sin(t * s.speed * 60 + s.phase));
+      ctx2.beginPath(); ctx2.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx2.fillStyle = `rgba(200, 220, 255, ${alpha})`; ctx2.fill();
+    }
+    t += 0.016; requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+
+buildZones();
+drawFigure();
+</script>
+</body>
+</html>
 <script>
 
 const parts = {
