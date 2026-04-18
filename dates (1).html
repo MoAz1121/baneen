@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>our dates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="stage">
+  <p id="page-title">our dates</p>
+  <p id="page-sub">every moment with you, saved forever</p>
+
+  <button id="add-btn" onclick="openModal()">+ add a date</button>
+
+  <div id="loading-state"><p>loading our memories...</p></div>
+  <div id="dates-grid"></div>
+  <div id="empty-state">
+    <p>no dates yet...</p>
+    <p class="hint">tap above to add your first memory ♡</p>
+  </div>
+
+  <a href="index.html" id="back-link">← back</a>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <p id="modal-title">add a date</p>
+    <div class="field">
+      <label>date</label>
+      <input type="date" id="inp-date" />
+    </div>
+    <div class="field">
+      <label>where did you go?</label>
+      <input type="text" id="inp-place" placeholder="e.g. amsterdam centrum..." />
+    </div>
+    <div class="field">
+      <label>a little note</label>
+      <textarea id="inp-note" placeholder="what made it special..."></textarea>
+    </div>
+    <div class="field">
+      <label>photo</label>
+      <div id="photo-drop" onclick="document.getElementById('inp-photo').click()">
+        <span id="photo-label">tap to choose a photo</span>
+        <img id="photo-preview" src="" alt="" />
+      </div>
+      <input type="file" id="inp-photo" accept="image/*" style="display:none" onchange="previewPhoto(event)" />
+    </div>
+    <div id="compress-status" style="display:none">
+      <p id="compress-text">compressing photo...</p>
+    </div>
+    <div id="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">cancel</button>
+      <button class="btn-save" id="save-btn" onclick="saveDate()">save ♡</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p id="lightbox-caption"></p>
+</div>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; background: #080c1a; font-family: 'Jost', sans-serif; overflow-x: hidden; }
+canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+#stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 100px; min-height: 100vh; }
+
+#page-title { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: clamp(28px, 6vw, 42px); color: #dde8ff; letter-spacing: 0.04em; text-shadow: 0 0 40px rgba(140,180,255,0.2); }
+#page-sub { font-weight: 300; font-size: 11px; letter-spacing: 0.2em; text-transform: lowercase; color: rgba(160,185,230,0.38); margin-top: 8px; margin-bottom: 32px; }
+
+#add-btn { background: transparent; border: 1px solid rgba(180,210,255,0.25); color: rgba(180,210,255,0.65); font-family: 'Jost', sans-serif; font-weight: 300; font-size: 12px; letter-spacing: 0.2em; text-transform: lowercase; padding: 10px 28px; border-radius: 40px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 40px; }
+#add-btn:hover { border-color: rgba(180,210,255,0.55); color: rgba(200,225,255,0.9); background: rgba(140,180,255,0.06); }
+
+#loading-state { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: rgba(160,185,230,0.25); margin-top: 40px; }
+
+#dates-grid { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+.date-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(180,210,255,0.12); border-radius: 16px; overflow: hidden; transition: border-color 0.3s ease, transform 0.3s ease; }
+.date-card:hover { border-color: rgba(180,210,255,0.3); transform: translateY(-3px); }
+.date-card-photo { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; cursor: zoom-in; }
+.date-card-no-photo { width: 100%; aspect-ratio: 4/3; background: rgba(140,180,255,0.04); display: flex; align-items: center; justify-content: center; font-size: 32px; color: rgba(180,210,255,0.12); }
+.date-card-body { padding: 16px 18px 18px; }
+.date-card-date { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(160,185,230,0.4); margin-bottom: 6px; }
+.date-card-place { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: #c8d8f8; margin-bottom: 8px; letter-spacing: 0.02em; }
+.date-card-note { font-size: 12px; font-weight: 300; color: rgba(160,185,230,0.5); line-height: 1.7; letter-spacing: 0.01em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.date-card-delete { display: block; margin-top: 12px; font-size: 10px; letter-spacing: 0.16em; text-transform: lowercase; color: rgba(255,140,140,0.22); background: none; border: none; cursor: pointer; font-family: 'Jost', sans-serif; padding: 0; transition: color 0.2s; }
+.date-card-delete:hover { color: rgba(255,140,140,0.55); }
+
+#empty-state { text-align: center; margin-top: 40px; display: none; }
+#empty-state p { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 22px; color: rgba(160,185,230,0.25); }
+#empty-state .hint { font-family: 'Jost', sans-serif; font-size: 11px; letter-spacing: 0.16em; color: rgba(160,185,230,0.18); margin-top: 8px; font-style: normal; }
+
+#back-link { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); font-weight: 300; font-size: 11px; letter-spacing: 0.2em; text-transform: lowercase; color: rgba(160,185,230,0.28); text-decoration: none; transition: color 0.2s; z-index: 10; }
+#back-link:hover { color: rgba(180,210,255,0.6); }
+
+#modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(4,6,18,0.85); display: none; align-items: center; justify-content: center; padding: 24px; backdrop-filter: blur(6px); }
+#modal-overlay.open { display: flex; }
+#modal { background: #0d1326; border: 1px solid rgba(180,210,255,0.15); border-radius: 20px; padding: 32px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+#modal-title { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 24px; color: #dde8ff; margin-bottom: 24px; letter-spacing: 0.04em; }
+
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(160,185,230,0.38); margin-bottom: 8px; }
+.field input[type="text"], .field input[type="date"], .field textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(180,210,255,0.12); border-radius: 10px; padding: 10px 14px; color: #c8d8f8; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; transition: border-color 0.2s; -webkit-appearance: none; color-scheme: dark; }
+.field input:focus, .field textarea:focus { border-color: rgba(180,210,255,0.35); }
+.field input::placeholder, .field textarea::placeholder { color: rgba(160,185,230,0.22); }
+.field textarea { resize: none; height: 80px; line-height: 1.6; }
+
+#photo-drop { width: 100%; border: 1px dashed rgba(180,210,255,0.18); border-radius: 10px; min-height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+#photo-drop:hover { border-color: rgba(180,210,255,0.38); }
+#photo-label { font-size: 11px; letter-spacing: 0.18em; text-transform: lowercase; color: rgba(160,185,230,0.3); }
+#photo-preview { display: none; width: 100%; height: 200px; object-fit: cover; }
+#photo-preview.show { display: block; }
+
+#compress-status { margin-bottom: 16px; }
+#compress-text { font-size: 10px; letter-spacing: 0.18em; text-transform: lowercase; color: rgba(160,185,230,0.35); }
+
+#modal-btns { display: flex; gap: 12px; margin-top: 8px; }
+.btn-cancel, .btn-save { flex: 1; padding: 12px; border-radius: 40px; font-family: 'Jost', sans-serif; font-size: 12px; letter-spacing: 0.2em; text-transform: lowercase; cursor: pointer; transition: all 0.2s; }
+.btn-cancel { background: transparent; border: 1px solid rgba(180,210,255,0.15); color: rgba(160,185,230,0.45); }
+.btn-cancel:hover { border-color: rgba(180,210,255,0.3); color: rgba(180,210,255,0.65); }
+.btn-save { background: rgba(140,180,255,0.1); border: 1px solid rgba(180,210,255,0.3); color: rgba(200,225,255,0.85); }
+.btn-save:hover { background: rgba(140,180,255,0.18); }
+.btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#lightbox { position: fixed; inset: 0; z-index: 200; background: rgba(4,6,18,0.96); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox-img { max-width: 92vw; max-height: 78vh; border-radius: 12px; object-fit: contain; border: 1px solid rgba(180,210,255,0.1); }
+#lightbox-caption { margin-top: 18px; font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: rgba(180,210,255,0.5); letter-spacing: 0.04em; text-align: center; }
+
+@media (max-width: 540px) { #dates-grid { grid-template-columns: 1fr; } #modal { padding: 24px 20px; } }
+</style>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCc2BHnL7JKAi8N9HSjsWYV35e3YtWTjxU",
+  authDomain: "baneen-2f47c.firebaseapp.com",
+  projectId: "baneen-2f47c",
+  storageBucket: "baneen-2f47c.firebasestorage.app",
+  messagingSenderId: "955214840494",
+  appId: "1:955214840494:web:9c41429a87943cb7ae633f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let selectedPhotoBase64 = null;
+
+// Compress image to base64 using canvas
+function compressImage(file, maxWidth = 1200, quality = 0.75) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+async function loadDates() {
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('dates-grid').innerHTML = '';
+  try {
+    const q = query(collection(db, 'dates'), orderBy('date', 'desc'));
+    const snapshot = await getDocs(q);
+    document.getElementById('loading-state').style.display = 'none';
+    if (snapshot.empty) { document.getElementById('empty-state').style.display = 'block'; return; }
+    const grid = document.getElementById('dates-grid');
+    snapshot.forEach(docSnap => renderCard(grid, docSnap.id, docSnap.data()));
+  } catch (err) {
+    document.getElementById('loading-state').innerHTML = '<p style="color:rgba(255,140,140,0.45);font-size:12px;letter-spacing:0.1em;">could not load — check firestore rules</p>';
+    console.error(err);
+  }
+}
+
+function renderCard(grid, id, d) {
+  const card = document.createElement('div');
+  card.className = 'date-card';
+  const photoHtml = d.photo
+    ? `<img class="date-card-photo" src="${d.photo}" alt="${d.place}" />`
+    : `<div class="date-card-no-photo">♡</div>`;
+
+  card.innerHTML = `
+    ${photoHtml}
+    <div class="date-card-body">
+      <p class="date-card-date">${formatDate(d.date)}</p>
+      <p class="date-card-place">${d.place || 'somewhere special'}</p>
+      ${d.note ? `<p class="date-card-note">${d.note}</p>` : ''}
+      <button class="date-card-delete">remove</button>
+    </div>`;
+
+  if (d.photo) {
+    card.querySelector('.date-card-photo').addEventListener('click', () => openLightbox(d.photo, d.place));
+  }
+
+  card.querySelector('.date-card-delete').addEventListener('click', async () => {
+    await deleteDoc(doc(db, 'dates', id));
+    card.remove();
+    if (!document.getElementById('dates-grid').children.length)
+      document.getElementById('empty-state').style.display = 'block';
+  });
+
+  grid.appendChild(card);
+}
+
+window.previewPhoto = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('compress-status').style.display = 'block';
+  document.getElementById('compress-text').textContent = 'compressing photo...';
+  selectedPhotoBase64 = await compressImage(file);
+  const prev = document.getElementById('photo-preview');
+  prev.src = selectedPhotoBase64;
+  prev.classList.add('show');
+  document.getElementById('photo-label').style.display = 'none';
+  document.getElementById('compress-status').style.display = 'none';
+};
+
+window.saveDate = async function() {
+  const date = document.getElementById('inp-date').value;
+  const place = document.getElementById('inp-place').value.trim();
+  const note = document.getElementById('inp-note').value.trim();
+  if (!place && !date) { document.getElementById('inp-place').focus(); return; }
+
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'saving...';
+
+  try {
+    await addDoc(collection(db, 'dates'), {
+      date, place, note,
+      photo: selectedPhotoBase64 || null,
+      createdAt: Date.now()
+    });
+    document.getElementById('modal-overlay').classList.remove('open');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    selectedPhotoBase64 = null;
+    loadDates();
+  } catch (err) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    alert('Something went wrong: ' + err.message);
+  }
+};
+
+window.openModal = function() {
+  ['inp-date','inp-place','inp-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('photo-preview').src = '';
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('photo-label').style.display = '';
+  document.getElementById('compress-status').style.display = 'none';
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('save-btn').textContent = 'save ♡';
+  selectedPhotoBase64 = null;
+  document.getElementById('modal-overlay').classList.add('open');
+};
+
+window.closeModal = function(e) {
+  if (!e || e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+};
+
+function openLightbox(src, caption) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-caption').textContent = caption;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('open'); };
+
+loadDates();
+</script>
+
+<script>
+(function() {
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight; stars = [];
+    const count = Math.floor(canvas.width * canvas.height / 7000);
+    for (let i = 0; i < count; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*0.9+0.2, a: Math.random()*0.55+0.1, speed: Math.random()*0.004+0.001, phase: Math.random()*Math.PI*2 });
+  }
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const grad = ctx.createRadialGradient(canvas.width*.5,canvas.height*.3,0,canvas.width*.5,canvas.height*.3,canvas.width*.6);
+    grad.addColorStop(0,'rgba(20,35,72,0.5)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+    for (const s of stars) {
+      const alpha = s.a*(0.6+0.4*Math.sin(t*s.speed*60+s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${alpha})`; ctx.fill();
+    }
+    t += 0.016; requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+</script>
+</body>
+</html>
