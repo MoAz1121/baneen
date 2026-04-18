@@ -102,12 +102,10 @@ function animParticles() {
 }
 
 // ── Intro animation ─────────────────────────────────────────────────────────
-const intro       = document.getElementById('intro');
-const nameWrap    = document.getElementById('name-wrap');
-const tagline     = document.getElementById('tagline');
-const tapHint     = document.getElementById('tap-hint');
-const mainScene   = document.getElementById('mainScene');
-const letters     = document.querySelectorAll('.b-letter');
+const intro    = document.getElementById('intro');
+const tagline  = document.getElementById('tagline');
+const tapHint  = document.getElementById('tap-hint');
+const letters  = document.querySelectorAll('.b-letter');
 
 let introPlayed = false;
 let introDone   = false;
@@ -121,160 +119,15 @@ function playIntro() {
   letters.forEach((el, i) => {
     setTimeout(() => {
       el.classList.add('lit');
-
-      // burst at letter center
       const rect = el.getBoundingClientRect();
       spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, 20);
     }, letterDelays[i]);
   });
 
-  // tagline fades in after last letter
   setTimeout(() => tagline.classList.add('show'), 1500);
-
-  // hint appears
   setTimeout(() => tapHint.classList.add('show'), 2000);
 }
 
-function revealCard() {
-  if (introDone) return;
-  introDone = true;
-
-  // big burst in center
-  spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 55);
-
-  intro.classList.add('fade-away');
-  setTimeout(() => {
-    intro.style.display = 'none';
-    mainScene.classList.add('visible');
-  }, 1200);
-}
-
-// Auto-play intro on load
 window.addEventListener('load', () => {
   setTimeout(playIntro, 400);
 });
-
-// First tap on intro plays animation; second tap reveals card
-intro.addEventListener('click', () => {
-  if (!introPlayed) { playIntro(); return; }
-  if (introDone) return;
-  // only allow reveal after name is done
-  if (introPlayed) revealCard();
-});
-
-// ── Main card logic ─────────────────────────────────────────────────────────
-const reasons = [
-  "I love the way you let me yap",
-  "I love how your presence alone is enough to make me forget all my worries",
-  "I love how you make the best come out of me",
-  "I love how happy I am whenever I am with you",
-  "I love how sweet you are",
-  "I love how kind you are",
-  "I love how incredibly gorgeous you are (straight up divine)",
-  "I love the way you love me",
-  "I love how full of love you are",
-  "I love how blessed I feel to be with you",
-  "I love how safe I feel when I am with you",
-  "I love how comfortable you make me feel",
-  "I love how you do not rush me",
-  "I love how being around you feels so natural",
-  "I love how nothing feels forced",
-  "I love how you make me feel understood without judgement"
-];
-
-const glows = [
-  "110, 160, 255","130, 180, 245","100, 150, 240","120, 170, 255",
-  "90, 155, 235","140, 185, 255","105, 165, 250","125, 175, 245",
-  "115, 158, 240","135, 182, 255","100, 160, 248","118, 172, 252",
-  "128, 178, 255","112, 168, 246","122, 176, 250","108, 162, 244"
-];
-
-let index = -1;
-let transitioning = false;
-
-const label   = document.getElementById('label');
-const reason  = document.getElementById('reason');
-const btn     = document.getElementById('btn');
-const counter = document.getElementById('counter');
-const card    = document.getElementById('card');
-
-function setGlow(i) {
-  const color = i >= 0 && i < glows.length ? glows[i] : "130, 170, 255";
-  card.style.setProperty('--glow-color', color);
-  document.documentElement.style.setProperty('--glow-color', color);
-}
-
-function setReason(text, labelText, counterText, btnText, glowIndex) {
-  if (transitioning) return;
-  transitioning = true;
-  reason.classList.add('fade-out');
-  setTimeout(() => {
-    label.textContent   = labelText   || '';
-    reason.textContent  = text;
-    counter.textContent = counterText || '';
-    btn.textContent     = btnText     || 'next';
-    if (glowIndex !== undefined) setGlow(glowIndex);
-    reason.classList.remove('fade-out');
-    reason.classList.add('fade-in');
-    setTimeout(() => { reason.classList.remove('fade-in'); transitioning = false; }, 500);
-  }, 350);
-}
-
-function next() {
-  if (transitioning) return;
-  if (index === -1) {
-    index = 0;
-    setReason(reasons[0], 'For my princess❤️', `1 of ${reasons.length}`, 'next', 0);
-    return;
-  }
-  if (index < reasons.length - 1) {
-    index++;
-    const isLast = index === reasons.length - 1;
-    setReason(
-      reasons[index], 'For my princess❤️',
-      `${index + 1} of ${reasons.length}`,
-      isLast ? 'one more thing' : 'next', index
-    );
-    return;
-  }
-  index = -1;
-  setReason('I could go on forever.', '', '', 'start over');
-  document.documentElement.style.setProperty('--glow-color', '130, 170, 255');
-}
-
-btn.addEventListener('click', next);
-
-let touchStartX = 0, touchStartY = 0;
-document.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
-document.addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45 && introDone) next();
-}, { passive: true });
-
-// ── Love timer ──────────────────────────────────────────────────────────────
-(function startTimer() {
-  const start = new Date('2026-03-26T00:00:00');
-  const timerEl = document.getElementById('timer');
-
-  function update() {
-    const now = new Date();
-    const diff = now - start;
-
-    if (diff < 0) { timerEl.textContent = 'almost time ♡'; return; }
-
-    const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours   = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-
-    const pad = n => String(n).padStart(2, '0');
-    timerEl.textContent = `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  }
-
-  update();
-  setInterval(update, 1000);
-})();
