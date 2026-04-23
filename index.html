@@ -4,248 +4,161 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>For my princess</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css" />
+
 <style>
-  .home-scene {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 0; padding: 24px; width: 100%;
-    opacity: 0; transform: translateY(18px);
-    transition: opacity 1s ease, transform 1s ease;
-    pointer-events: none;
-  }
+html,body{margin:0;padding:0;background:#0b0f1e;color:#dde8ff;font-family:'Jost',sans-serif;overflow:hidden}
 
-  .home-scene.visible {
-    opacity: 1; transform: translateY(0); pointer-events: all;
-  }
+/* LOGIN */
+#login-screen{
+  position:fixed;inset:0;z-index:50;
+  display:flex;align-items:center;justify-content:center;
+  background:#0b0f1e;
+}
+#login-card{
+  width:320px;padding:30px;border-radius:20px;
+  border:1px solid rgba(180,210,255,0.2);
+  background:rgba(255,255,255,0.02);
+  text-align:center;
+}
+#login-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:28px;font-style:italic;margin-bottom:10px;
+}
+#login-sub{
+  font-size:11px;letter-spacing:0.2em;margin-bottom:20px;color:rgba(180,200,235,0.4)
+}
+#login-card input{
+  width:100%;padding:10px;border-radius:12px;
+  border:1px solid rgba(180,210,255,0.2);
+  background:rgba(255,255,255,0.04);
+  color:#fff;margin-bottom:10px;text-align:center;
+}
+#login-btn{
+  width:100%;padding:10px;border-radius:30px;
+  border:1px solid rgba(180,210,255,0.3);
+  background:rgba(140,180,255,0.1);
+  color:#fff;cursor:pointer;
+}
+#login-error{font-size:11px;color:#ff8c8c;margin-top:10px}
 
-  .home-ily {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 300; font-style: italic;
-    font-size: clamp(13px, 2.8vw, 16px);
-    letter-spacing: 0.32em;
-    color: rgba(180, 205, 255, 0.38);
-    text-transform: lowercase;
-    margin-bottom: 36px;
-    text-shadow: 0 0 28px rgba(140, 180, 255, 0.18);
-  }
+/* HOME */
+.home{
+  display:none;align-items:center;justify-content:center;
+  height:100vh;text-align:center;flex-direction:column;
+}
+.home.visible{display:flex}
 
-  .home-card {
-    width: min(480px, 92vw);
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 24px;
-    padding: 52px 44px 48px;
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    box-shadow:
-      0 0 40px rgba(130, 170, 255, 0.18),
-      0 2px 60px rgba(0, 0, 0, 0.35),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    display: flex; flex-direction: column; align-items: center;
-  }
+.home a{
+  margin-top:10px;
+  display:block;
+  color:#9ebdf0;
+  text-decoration:none;
+}
 
-  .home-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 300; font-style: italic;
-    font-size: clamp(52px, 13vw, 78px);
-    color: #dde8ff;
-    letter-spacing: 0.04em;
-    line-height: 1;
-    text-shadow: 0 0 14px rgba(160, 200, 255, 0.5), 0 0 35px rgba(140, 180, 255, 0.25);
-    margin-bottom: 6px;
-  }
-
-  .home-sub {
-    font-family: 'Jost', sans-serif;
-    font-weight: 300; font-size: 10px;
-    letter-spacing: 0.22em; text-transform: lowercase;
-    color: rgba(180, 200, 235, 0.3);
-    margin-bottom: 44px;
-  }
-
-  .home-links {
-    display: flex; flex-direction: column; align-items: stretch;
-    gap: 14px; width: 100%;
-  }
-
-  .home-link {
-    font-family: 'Jost', sans-serif; font-weight: 300;
-    font-size: 12px; letter-spacing: 0.2em; text-transform: lowercase;
-    color: var(--accent); background: var(--btn-bg);
-    border: 1px solid var(--btn-border); border-radius: 40px;
-    padding: 13px 32px; cursor: pointer; text-decoration: none;
-    display: flex; align-items: center; justify-content: space-between;
-    transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .home-link:hover {
-    background: var(--btn-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(130, 170, 255, 0.2);
-  }
-
-  .home-link:active { transform: translateY(0); }
-  .home-link span { opacity: 0.35; font-size: 11px; }
-
-  .home-since {
-    font-family: 'Jost', sans-serif; font-weight: 300;
-    font-size: 10px; letter-spacing: 0.18em;
-    color: rgba(180, 200, 235, 0.22);
-    margin-top: 36px;
-  }
-
-  #lock {
-    position: fixed; inset: 0; z-index: 50;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 20px; background: #0b0f1e;
-    transition: opacity 0.8s ease;
-  }
-
-  #lock.fade-away { opacity: 0; pointer-events: none; }
-
-  #lock-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 300; font-style: italic;
-    font-size: clamp(13px, 2.8vw, 16px);
-    letter-spacing: 0.32em;
-    color: rgba(180, 205, 255, 0.38);
-  }
-
-  #lock-input {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(180,210,255,0.15);
-    border-radius: 40px;
-    padding: 12px 28px;
-    color: #c8d8f8;
-    font-family: 'Jost', sans-serif;
-    font-weight: 300; font-size: 18px;
-    letter-spacing: 0.3em;
-    text-align: center; outline: none; width: 180px;
-    transition: border-color 0.2s ease;
-    -webkit-text-security: disc;
-  }
-
-  #lock-input:focus { border-color: rgba(180,210,255,0.4); }
-
-  #lock-input.wrong {
-    border-color: rgba(255,120,120,0.5);
-    animation: shake 0.3s ease;
-  }
-
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-6px); }
-    75% { transform: translateX(6px); }
-  }
-
-  #lock-hint {
-    font-family: 'Jost', sans-serif;
-    font-weight: 300; font-size: 10px;
-    letter-spacing: 0.2em; text-transform: lowercase;
-    color: rgba(160,185,230,0.0);
-    transition: color 0.4s ease;
-  }
-
-  #lock-hint.show { color: rgba(255,120,120,0.45); }
-
-  @media (max-width: 400px) {
-    .home-card { padding: 40px 28px 40px; }
-  }
+#logout{
+  position:fixed;top:20px;right:20px;
+  border:1px solid rgba(180,210,255,0.2);
+  background:transparent;color:#9ebdf0;
+  padding:6px 12px;border-radius:20px;
+  cursor:pointer;
+}
 </style>
 </head>
+
 <body>
 
-<canvas id="sky"></canvas>
-<canvas id="particles"></canvas>
-
-<div id="lock">
-  <p id="lock-title">enter code</p>
-  <input id="lock-input" type="tel" maxlength="6" autocomplete="off" inputmode="numeric" />
-  <p id="lock-hint">incorrect</p>
-</div>
-
-<div id="intro" style="display:none">
-  <div id="name-wrap">
-    <span class="b-letter" data-i="0">B</span>
-    <span class="b-letter" data-i="1">a</span>
-    <span class="b-letter" data-i="2">n</span>
-    <span class="b-letter" data-i="3">e</span>
-    <span class="b-letter" data-i="4">e</span>
-    <span class="b-letter" data-i="5">n</span>
-  </div>
-  <p id="tagline">my favourite person ♡</p>
-  <p id="tap-hint">tap anywhere</p>
-</div>
-
-<div class="home-scene" id="homeScene">
-  <p class="home-ily">i love you</p>
-  <div class="home-card">
-    <p class="home-name">Baneen</p>
-    <p class="home-sub">my favourite person ♡</p>
-    <div class="home-links">
-      <a href="reasons.html" class="home-link">reasons i love you <span>→</span></a>
-      <a href="typewriter.html" class="home-link">a letter for you <span>→</span></a>
-      <a href="body.html" class="home-link">every part of you <span>→</span></a>
-      <a href="dates.html" class="home-link">our dates <span>→</span></a>
-      <a href="bucket.html" class="home-link">our bucket list <span>→</span></a>
-      <a href="reassurance.html" class="home-link">for when you doubt it <span>→</span></a>
-    </div>
-    <p class="home-since">since 26.03.2026</p>
+<!-- LOGIN -->
+<div id="login-screen">
+  <div id="login-card">
+    <div id="login-title">Baneen</div>
+    <div id="login-sub">sign in</div>
+    <input id="login-username" placeholder="username" />
+    <input id="login-password" type="password" placeholder="password" />
+    <button id="login-btn">enter ♡</button>
+    <div id="login-error"></div>
   </div>
 </div>
 
-<script src="script.js"></script>
-<script>
-  const HASH = '73be97dcba3ebf4f46b178a73fdc3d32755a2c178add5b069f42c3e39ecfa521';
-  const lockEl = document.getElementById('lock');
-  const lockInput = document.getElementById('lock-input');
-  const lockHint = document.getElementById('lock-hint');
-  const homeScene = document.getElementById('homeScene');
+<!-- HOME -->
+<div id="home" class="home">
+  <h1 style="font-family:'Cormorant Garamond',serif;font-style:italic;">Baneen</h1>
 
-  async function hashInput(str) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  <a href="dates.html">our dates →</a>
+  <a href="bucket.html">our bucket list →</a>
+  <a href="reasons.html">reasons i love you →</a>
+
+</div>
+
+<button id="logout" style="display:none;">logout</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCc2BHnL7JKAi8N9HSjsWYV35e3YtWTjxU",
+  authDomain: "baneen-2f47c.firebaseapp.com",
+  projectId: "baneen-2f47c",
+  storageBucket: "baneen-2f47c.firebasestorage.app",
+  messagingSenderId: "955214840494",
+  appId: "1:955214840494:web:9c41429a87943cb7ae633f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+function usernameToEmail(username){
+  return username.trim().toLowerCase() + "@bucket.local";
+}
+
+async function login(){
+  const user = document.getElementById("login-username").value;
+  const pass = document.getElementById("login-password").value;
+  const err = document.getElementById("login-error");
+
+  err.textContent = "";
+
+  try{
+    await signInWithEmailAndPassword(auth, usernameToEmail(user), pass);
+  }catch(e){
+    err.textContent = "login failed";
   }
+}
 
-  lockInput.focus();
+document.getElementById("login-btn").onclick = login;
 
-  lockInput.addEventListener('input', async () => {
-    lockHint.classList.remove('show');
-    lockInput.classList.remove('wrong');
-    if (lockInput.value.length < 6) return;
-    const h = await hashInput(lockInput.value);
-    if (h === HASH) {
-      lockEl.classList.add('fade-away');
-      setTimeout(() => {
-        lockEl.style.display = 'none';
-        document.getElementById('intro').style.display = '';
-        setTimeout(playIntro, 400);
-      }, 800);
-    } else {
-      lockInput.classList.add('wrong');
-      lockHint.classList.add('show');
-      setTimeout(() => {
-        lockInput.value = '';
-        lockInput.classList.remove('wrong');
-      }, 600);
-    }
-  });
+document.getElementById("login-password").addEventListener("keydown",(e)=>{
+  if(e.key==="Enter") login();
+});
 
-  intro.addEventListener('click', () => {
-    if (!introPlayed) { playIntro(); return; }
-    if (introDone) return;
-    introDone = true;
-    spawnBurst(window.innerWidth / 2, window.innerHeight / 2, 55);
-    intro.classList.add('fade-away');
-    setTimeout(() => {
-      intro.style.display = 'none';
-      homeScene.classList.add('visible');
-    }, 1200);
-  });
+document.getElementById("login-username").addEventListener("keydown",(e)=>{
+  if(e.key==="Enter") login();
+});
+
+onAuthStateChanged(auth,(user)=>{
+  const loginScreen = document.getElementById("login-screen");
+  const home = document.getElementById("home");
+  const logout = document.getElementById("logout");
+
+  if(user){
+    loginScreen.style.display="none";
+    home.classList.add("visible");
+    logout.style.display="block";
+  }else{
+    loginScreen.style.display="flex";
+    home.classList.remove("visible");
+    logout.style.display="none";
+  }
+});
+
+document.getElementById("logout").onclick = async ()=>{
+  await signOut(auth);
+};
 </script>
+
 </body>
 </html>
