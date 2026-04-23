@@ -1,3 +1,521 @@
+bash -lc cat > /mnt/data/dates_secure.html <<'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>our dates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="stage">
+  <p id="page-title">our dates</p>
+  <p id="page-sub">every moment with you, saved forever</p>
+
+  <button id="add-btn" onclick="openModal()">+ add a date</button>
+
+  <div id="loading-state"><p>loading our memories...</p></div>
+  <div id="dates-grid"></div>
+  <div id="empty-state">
+    <p>no dates yet...</p>
+    <p class="hint">tap above to add your first memory ♡</p>
+  </div>
+
+  <a href="index.html" id="back-link">← back</a>
+</div>
+
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div id="modal">
+    <p id="modal-title">add a date</p>
+    <div class="field">
+      <label>date</label>
+      <input type="date" id="inp-date" />
+    </div>
+    <div class="field">
+      <label>where did we go my love?</label>
+      <input type="text" id="inp-place" placeholder="e.g. amsterdam centrum..." />
+    </div>
+    <div class="field">
+      <label>a little note</label>
+      <textarea id="inp-note" placeholder="what made it special..."></textarea>
+    </div>
+    <div class="field">
+      <label>photo</label>
+      <div id="photo-drop" onclick="document.getElementById('inp-photo').click()">
+        <span id="photo-label">tap to choose a photo</span>
+        <img id="photo-preview" src="" alt="" />
+      </div>
+      <input type="file" id="inp-photo" accept="image/*" style="display:none" onchange="previewPhoto(event)" />
+    </div>
+    <div id="compress-status" style="display:none">
+      <p id="compress-text">compressing photo...</p>
+    </div>
+    <div id="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">cancel</button>
+      <button class="btn-save" id="save-btn" onclick="saveDate()">save ♡</button>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="" />
+  <p id="lightbox-caption"></p>
+</div>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; background: #080c1a; font-family: 'Jost', sans-serif; overflow-x: hidden; }
+canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+#stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 100px; min-height: 100vh; visibility: hidden; }
+
+#page-title { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: clamp(28px, 6vw, 42px); color: #dde8ff; letter-spacing: 0.04em; text-shadow: 0 0 40px rgba(140,180,255,0.2); }
+#page-sub { font-weight: 300; font-size: 11px; letter-spacing: 0.2em; text-transform: lowercase; color: rgba(160,185,230,0.38); margin-top: 8px; margin-bottom: 32px; }
+
+#add-btn { background: transparent; border: 1px solid rgba(180,210,255,0.25); color: rgba(180,210,255,0.65); font-family: 'Jost', sans-serif; font-weight: 300; font-size: 12px; letter-spacing: 0.2em; text-transform: lowercase; padding: 10px 28px; border-radius: 40px; cursor: pointer; transition: all 0.3s ease; margin-bottom: 40px; }
+#add-btn:hover { border-color: rgba(180,210,255,0.55); color: rgba(200,225,255,0.9); background: rgba(140,180,255,0.06); }
+
+#loading-state { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: rgba(160,185,230,0.25); margin-top: 40px; }
+
+#dates-grid { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+.date-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(180,210,255,0.12); border-radius: 16px; overflow: hidden; transition: border-color 0.3s ease, transform 0.3s ease; }
+.date-card:hover { border-color: rgba(180,210,255,0.3); transform: translateY(-3px); }
+.date-card-photo { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; cursor: zoom-in; }
+.date-card-no-photo { width: 100%; aspect-ratio: 4/3; background: rgba(140,180,255,0.04); display: flex; align-items: center; justify-content: center; font-size: 32px; color: rgba(180,210,255,0.12); }
+.date-card-body { padding: 16px 18px 18px; }
+.date-card-date { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(160,185,230,0.4); margin-bottom: 6px; }
+.date-card-place { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: #c8d8f8; margin-bottom: 8px; letter-spacing: 0.02em; }
+.date-card-note { font-size: 12px; font-weight: 300; color: rgba(160,185,230,0.5); line-height: 1.7; letter-spacing: 0.01em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.date-card-delete { display: block; margin-top: 12px; font-size: 10px; letter-spacing: 0.16em; text-transform: lowercase; color: rgba(255,140,140,0.22); background: none; border: none; cursor: pointer; font-family: 'Jost', sans-serif; padding: 0; transition: color 0.2s; }
+.date-card-delete:hover { color: rgba(255,140,140,0.55); }
+
+#empty-state { text-align: center; margin-top: 40px; display: none; }
+#empty-state p { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 22px; color: rgba(160,185,230,0.25); }
+#empty-state .hint { font-family: 'Jost', sans-serif; font-size: 11px; letter-spacing: 0.16em; color: rgba(160,185,230,0.18); margin-top: 8px; font-style: normal; }
+
+#back-link { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); font-weight: 300; font-size: 11px; letter-spacing: 0.2em; text-transform: lowercase; color: rgba(160,185,230,0.28); text-decoration: none; transition: color 0.2s; z-index: 10; }
+#back-link:hover { color: rgba(180,210,255,0.6); }
+
+#modal-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(4,6,18,0.85); display: none; align-items: center; justify-content: center; padding: 24px; backdrop-filter: blur(6px); }
+#modal-overlay.open { display: flex; }
+#modal { background: #0d1326; border: 1px solid rgba(180,210,255,0.15); border-radius: 20px; padding: 32px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+#modal-title { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 24px; color: #dde8ff; margin-bottom: 24px; letter-spacing: 0.04em; }
+
+.field { margin-bottom: 20px; }
+.field label { display: block; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(160,185,230,0.38); margin-bottom: 8px; }
+.field input[type="text"], .field input[type="date"], .field textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(180,210,255,0.12); border-radius: 10px; padding: 10px 14px; color: #c8d8f8; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 300; outline: none; transition: border-color 0.2s; -webkit-appearance: none; color-scheme: dark; }
+.field input:focus, .field textarea:focus { border-color: rgba(180,210,255,0.35); }
+.field input::placeholder, .field textarea::placeholder { color: rgba(160,185,230,0.22); }
+.field textarea { resize: none; height: 80px; line-height: 1.6; }
+
+#photo-drop { width: 100%; border: 1px dashed rgba(180,210,255,0.18); border-radius: 10px; min-height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; transition: border-color 0.2s; }
+#photo-drop:hover { border-color: rgba(180,210,255,0.38); }
+#photo-label { font-size: 11px; letter-spacing: 0.18em; text-transform: lowercase; color: rgba(160,185,230,0.3); }
+#photo-preview { display: none; width: 100%; height: 200px; object-fit: cover; }
+#photo-preview.show { display: block; }
+
+#compress-status { margin-bottom: 16px; }
+#compress-text { font-size: 10px; letter-spacing: 0.18em; text-transform: lowercase; color: rgba(160,185,230,0.35); }
+
+#modal-btns { display: flex; gap: 12px; margin-top: 8px; }
+.btn-cancel, .btn-save { flex: 1; padding: 12px; border-radius: 40px; font-family: 'Jost', sans-serif; font-size: 12px; letter-spacing: 0.2em; text-transform: lowercase; cursor: pointer; transition: all 0.2s; }
+.btn-cancel { background: transparent; border: 1px solid rgba(180,210,255,0.15); color: rgba(160,185,230,0.45); }
+.btn-cancel:hover { border-color: rgba(180,210,255,0.3); color: rgba(180,210,255,0.65); }
+.btn-save { background: rgba(140,180,255,0.1); border: 1px solid rgba(180,210,255,0.3); color: rgba(200,225,255,0.85); }
+.btn-save:hover { background: rgba(140,180,255,0.18); }
+.btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#lightbox { position: fixed; inset: 0; z-index: 200; background: rgba(4,6,18,0.96); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+#lightbox.open { display: flex; }
+#lightbox-img { max-width: 92vw; max-height: 78vh; border-radius: 12px; object-fit: contain; border: 1px solid rgba(180,210,255,0.1); }
+#lightbox-caption { margin-top: 18px; font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic; font-size: 18px; color: rgba(180,210,255,0.5); letter-spacing: 0.04em; text-align: center; }
+
+#login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4,6,18,0.82);
+  backdrop-filter: blur(8px);
+}
+#login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #0d1326;
+  border: 1px solid rgba(180,210,255,0.14);
+  border-radius: 22px;
+  padding: 32px 24px 24px;
+  text-align: center;
+}
+#login-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 34px;
+  color: #dde8ff;
+  letter-spacing: 0.04em;
+}
+#login-sub {
+  margin-top: 8px;
+  margin-bottom: 24px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: rgba(160,185,230,0.4);
+}
+#login-card input {
+  width: 100%;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(180,210,255,0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #c8d8f8;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+}
+#login-card input:focus { border-color: rgba(180,210,255,0.35); }
+#login-card input::placeholder { color: rgba(160,185,230,0.22); }
+#login-btn {
+  width: 100%;
+  margin-top: 4px;
+  background: rgba(140,180,255,0.1);
+  border: 1px solid rgba(180,210,255,0.3);
+  color: rgba(200,225,255,0.85);
+  border-radius: 40px;
+  padding: 12px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+#login-error {
+  min-height: 18px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: rgba(255,140,140,0.7);
+}
+#login-back {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: rgba(160,185,230,0.3);
+  text-decoration: none;
+}
+#logout-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 150;
+  background: transparent;
+  border: 1px solid rgba(180,210,255,0.16);
+  color: rgba(180,210,255,0.45);
+  border-radius: 40px;
+  padding: 8px 16px;
+  font-family: 'Jost', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+#logout-btn:hover { color: rgba(200,225,255,0.8); border-color: rgba(180,210,255,0.35); }
+
+@media (max-width: 540px) { #dates-grid { grid-template-columns: 1fr; } #modal { padding: 24px 20px; } }
+</style>
+
+<div id="login-screen">
+  <div id="login-card">
+    <p id="login-title">our dates</p>
+    <p id="login-sub">sign in to see our memories</p>
+    <input id="login-username" type="text" placeholder="username" />
+    <input id="login-password" type="password" placeholder="password" />
+    <button id="login-btn">enter ♡</button>
+    <p id="login-error"></p>
+    <a href="index.html" id="login-back">← back</a>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCc2BHnL7JKAi8N9HSjsWYV35e3YtWTjxU",
+  authDomain: "baneen-2f47c.firebaseapp.com",
+  projectId: "baneen-2f47c",
+  storageBucket: "baneen-2f47c.firebasestorage.app",
+  messagingSenderId: "955214840494",
+  appId: "1:955214840494:web:9c41429a87943cb7ae633f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let selectedPhotoBase64 = null;
+
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@bucket.local`;
+}
+
+function compressImage(file, maxWidth = 1200, quality = 0.75) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+async function loadDates() {
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('dates-grid').innerHTML = '';
+
+  try {
+    const q = query(collection(db, 'dates'), orderBy('date', 'desc'));
+    const snapshot = await getDocs(q);
+    document.getElementById('loading-state').style.display = 'none';
+
+    if (snapshot.empty) {
+      document.getElementById('empty-state').style.display = 'block';
+      return;
+    }
+
+    const grid = document.getElementById('dates-grid');
+    snapshot.forEach(docSnap => renderCard(grid, docSnap.id, docSnap.data()));
+  } catch (err) {
+    document.getElementById('loading-state').innerHTML = '<p style="color:rgba(255,140,140,0.45);font-size:12px;letter-spacing:0.1em;">could not load — not signed in or rules blocked</p>';
+    console.error(err);
+  }
+}
+
+function renderCard(grid, id, d) {
+  const card = document.createElement('div');
+  card.className = 'date-card';
+  const photoHtml = d.photo
+    ? `<img class="date-card-photo" src="${d.photo}" alt="${d.place || ''}" />`
+    : `<div class="date-card-no-photo">♡</div>`;
+
+  card.innerHTML = `
+    ${photoHtml}
+    <div class="date-card-body">
+      <p class="date-card-date">${formatDate(d.date)}</p>
+      <p class="date-card-place">${d.place || 'somewhere special'}</p>
+      ${d.note ? `<p class="date-card-note">${d.note}</p>` : ''}
+      <button class="date-card-delete">remove</button>
+    </div>`;
+
+  if (d.photo) {
+    card.querySelector('.date-card-photo').addEventListener('click', () => openLightbox(d.photo, d.place));
+  }
+
+  card.querySelector('.date-card-delete').addEventListener('click', async () => {
+    try {
+      await deleteDoc(doc(db, 'dates', id));
+      card.remove();
+      if (!document.getElementById('dates-grid').children.length) {
+        document.getElementById('empty-state').style.display = 'block';
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Could not remove date.');
+    }
+  });
+
+  grid.appendChild(card);
+}
+
+window.previewPhoto = async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('compress-status').style.display = 'block';
+  document.getElementById('compress-text').textContent = 'compressing photo...';
+  selectedPhotoBase64 = await compressImage(file);
+  const prev = document.getElementById('photo-preview');
+  prev.src = selectedPhotoBase64;
+  prev.classList.add('show');
+  document.getElementById('photo-label').style.display = 'none';
+  document.getElementById('compress-status').style.display = 'none';
+};
+
+window.saveDate = async function() {
+  const date = document.getElementById('inp-date').value;
+  const place = document.getElementById('inp-place').value.trim();
+  const note = document.getElementById('inp-note').value.trim();
+  if (!place && !date) {
+    document.getElementById('inp-place').focus();
+    return;
+  }
+
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'saving...';
+
+  try {
+    await addDoc(collection(db, 'dates'), {
+      date,
+      place,
+      note,
+      photo: selectedPhotoBase64 || null,
+      createdAt: Date.now()
+    });
+    document.getElementById('modal-overlay').classList.remove('open');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    selectedPhotoBase64 = null;
+    loadDates();
+  } catch (err) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    alert('Something went wrong: ' + err.message);
+  }
+};
+
+window.openModal = function() {
+  ['inp-date','inp-place','inp-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('photo-preview').src = '';
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('photo-label').style.display = '';
+  document.getElementById('compress-status').style.display = 'none';
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('save-btn').textContent = 'save ♡';
+  selectedPhotoBase64 = null;
+  document.getElementById('modal-overlay').classList.add('open');
+};
+
+window.closeModal = function(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+};
+
+function openLightbox(src, caption) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-caption').textContent = caption || '';
+  document.getElementById('lightbox').classList.add('open');
+}
+
+window.closeLightbox = function() {
+  document.getElementById('lightbox').classList.remove('open');
+};
+
+function ensureLogoutButton() {
+  if (document.getElementById('logout-btn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'logout-btn';
+  btn.textContent = 'logout';
+  btn.addEventListener('click', async () => {
+    await signOut(auth);
+  });
+  document.body.appendChild(btn);
+}
+
+async function loginUser() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const error = document.getElementById('login-error');
+  error.textContent = '';
+
+  if (!username || !password) {
+    error.textContent = 'fill in username and password';
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+  } catch (err) {
+    error.textContent = 'login failed';
+    console.error(err);
+  }
+}
+
+document.getElementById('login-btn').addEventListener('click', loginUser);
+document.getElementById('login-password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loginUser();
+});
+
+onAuthStateChanged(auth, (user) => {
+  const loginScreen = document.getElementById('login-screen');
+  const stage = document.getElementById('stage');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  if (user) {
+    loginScreen.style.display = 'none';
+    stage.style.visibility = 'visible';
+    ensureLogoutButton();
+    loadDates();
+  } else {
+    loginScreen.style.display = 'flex';
+    stage.style.visibility = 'hidden';
+    if (logoutBtn) logoutBtn.remove();
+  }
+});
+</script>
+
+<script>
+(function() {
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight; stars = [];
+    const count = Math.floor(canvas.width * canvas.height / 7000);
+    for (let i = 0; i < count; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*0.9+0.2, a: Math.random()*0.55+0.1, speed: Math.random()*0.004+0.001, phase: Math.random()*Math.PI*2 });
+  }
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const grad = ctx.createRadialGradient(canvas.width*.5,canvas.height*.3,0,canvas.width*.5,canvas.height*.3,canvas.width*.6);
+    grad.addColorStop(0,'rgba(20,35,72,0.5)'); grad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+    for (const s of stars) {
+      const alpha = s.a*(0.6+0.4*Math.sin(t*s.speed*60+s.phase));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,220,255,${alpha})`; ctx.fill();
+    }
+    t += 0.016; requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+})();
+</script>
+</body>
+</html>
+EOF
+
+cat > /mnt/data/bucket_secure.html <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +531,14 @@
 <canvas id="sky"></canvas>
 
 <div id="stage">
+  <div id="top-bar">
+    <div id="filters">
+      <button class="filter-btn active" data-filter="all">all</button>
+      <button class="filter-btn" data-filter="todo">to do</button>
+      <button class="filter-btn" data-filter="done">done</button>
+    </div>
+  </div>
+
   <p id="page-title">our bucket list</p>
   <p id="page-sub">all the little things we still want to do together</p>
 
@@ -20,7 +546,6 @@
 
   <div id="loading-state"><p>loading our dreams...</p></div>
   <div id="bucket-grid"></div>
-
   <div id="empty-state">
     <p>nothing here yet...</p>
     <p class="hint">add the first thing you want to do together ♡</p>
@@ -68,6 +593,41 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   align-items: center;
   padding: 48px 24px 100px;
   min-height: 100vh;
+  visibility: hidden;
+}
+
+#top-bar {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+#filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.filter-btn {
+  background: transparent;
+  border: 1px solid rgba(180,210,255,0.14);
+  color: rgba(160,185,230,0.42);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: 'Jost', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+.filter-btn.active,
+.filter-btn:hover {
+  border-color: rgba(180,210,255,0.35);
+  color: rgba(200,225,255,0.85);
+  background: rgba(140,180,255,0.08);
 }
 
 #page-title {
@@ -106,7 +666,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   transition: all 0.3s ease;
   margin-bottom: 40px;
 }
-
 #add-btn:hover {
   border-color: rgba(180,210,255,0.55);
   color: rgba(200,225,255,0.9);
@@ -137,17 +696,14 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   padding: 20px 18px 18px;
   transition: border-color 0.3s ease, transform 0.3s ease;
 }
-
 .bucket-card:hover {
   border-color: rgba(180,210,255,0.3);
   transform: translateY(-3px);
 }
-
 .bucket-card.done {
   opacity: 0.66;
   border-color: rgba(160,220,180,0.16);
 }
-
 .bucket-card.done .bucket-title {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
@@ -161,6 +717,21 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   margin-bottom: 12px;
 }
 
+.bucket-title-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.bucket-heart {
+  font-size: 16px;
+  line-height: 1.2;
+  color: rgba(255,170,200,0.65);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
 .bucket-title {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 300;
@@ -168,6 +739,7 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   font-size: 24px;
   line-height: 1.2;
   color: #d8e5ff;
+  word-break: break-word;
 }
 
 .bucket-check {
@@ -210,11 +782,15 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   color: rgba(180,210,255,0.32);
 }
 
-.bucket-delete {
+.bucket-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.bucket-action {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: lowercase;
-  color: rgba(255,140,140,0.22);
   background: none;
   border: none;
   cursor: pointer;
@@ -222,16 +798,16 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   transition: color 0.2s;
 }
 
-.bucket-delete:hover {
-  color: rgba(255,140,140,0.55);
-}
+.bucket-edit { color: rgba(180,210,255,0.35); }
+.bucket-edit:hover { color: rgba(200,225,255,0.75); }
+.bucket-delete { color: rgba(255,140,140,0.22); }
+.bucket-delete:hover { color: rgba(255,140,140,0.55); }
 
 #empty-state {
   text-align: center;
   margin-top: 40px;
   display: none;
 }
-
 #empty-state p {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 300;
@@ -239,7 +815,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   font-size: 22px;
   color: rgba(160,185,230,0.25);
 }
-
 #empty-state .hint {
   font-family: 'Jost', sans-serif;
   font-size: 11px;
@@ -263,10 +838,7 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   transition: color 0.2s;
   z-index: 10;
 }
-
-#back-link:hover {
-  color: rgba(180,210,255,0.6);
-}
+#back-link:hover { color: rgba(180,210,255,0.6); }
 
 #modal-overlay {
   position: fixed;
@@ -279,7 +851,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   padding: 24px;
   backdrop-filter: blur(6px);
 }
-
 #modal-overlay.open { display: flex; }
 
 #modal {
@@ -302,7 +873,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
 }
 
 .field { margin-bottom: 20px; }
-
 .field label {
   display: block;
   font-size: 10px;
@@ -311,7 +881,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   color: rgba(160,185,230,0.38);
   margin-bottom: 8px;
 }
-
 .field input,
 .field textarea {
   width: 100%;
@@ -326,17 +895,10 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   outline: none;
   transition: border-color 0.2s;
 }
-
 .field input:focus,
-.field textarea:focus {
-  border-color: rgba(180,210,255,0.35);
-}
-
+.field textarea:focus { border-color: rgba(180,210,255,0.35); }
 .field input::placeholder,
-.field textarea::placeholder {
-  color: rgba(160,185,230,0.22);
-}
-
+.field textarea::placeholder { color: rgba(160,185,230,0.22); }
 .field textarea {
   resize: none;
   height: 90px;
@@ -348,7 +910,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   gap: 12px;
   margin-top: 8px;
 }
-
 .btn-cancel,
 .btn-save {
   flex: 1;
@@ -361,32 +922,120 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .btn-cancel {
   background: transparent;
   border: 1px solid rgba(180,210,255,0.15);
   color: rgba(160,185,230,0.45);
 }
-
 .btn-cancel:hover {
   border-color: rgba(180,210,255,0.3);
   color: rgba(180,210,255,0.65);
 }
-
 .btn-save {
   background: rgba(140,180,255,0.1);
   border: 1px solid rgba(180,210,255,0.3);
   color: rgba(200,225,255,0.85);
 }
+.btn-save:hover { background: rgba(140,180,255,0.18); }
+.btn-save:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.btn-save:hover {
-  background: rgba(140,180,255,0.18);
+#login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4,6,18,0.82);
+  backdrop-filter: blur(8px);
 }
-
-.btn-save:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+#login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #0d1326;
+  border: 1px solid rgba(180,210,255,0.14);
+  border-radius: 22px;
+  padding: 32px 24px 24px;
+  text-align: center;
 }
+#login-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 34px;
+  color: #dde8ff;
+  letter-spacing: 0.04em;
+}
+#login-sub {
+  margin-top: 8px;
+  margin-bottom: 24px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: rgba(160,185,230,0.4);
+}
+#login-card input {
+  width: 100%;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(180,210,255,0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #c8d8f8;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+}
+#login-card input:focus { border-color: rgba(180,210,255,0.35); }
+#login-card input::placeholder { color: rgba(160,185,230,0.22); }
+#login-btn {
+  width: 100%;
+  margin-top: 4px;
+  background: rgba(140,180,255,0.1);
+  border: 1px solid rgba(180,210,255,0.3);
+  color: rgba(200,225,255,0.85);
+  border-radius: 40px;
+  padding: 12px;
+  font-family: 'Jost', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+#login-error {
+  min-height: 18px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: rgba(255,140,140,0.7);
+}
+#login-back {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: rgba(160,185,230,0.3);
+  text-decoration: none;
+}
+#logout-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 150;
+  background: transparent;
+  border: 1px solid rgba(180,210,255,0.16);
+  color: rgba(180,210,255,0.45);
+  border-radius: 40px;
+  padding: 8px 16px;
+  font-family: 'Jost', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+#logout-btn:hover { color: rgba(200,225,255,0.8); border-color: rgba(180,210,255,0.35); }
 
 @media (max-width: 540px) {
   #bucket-grid { grid-template-columns: 1fr; }
@@ -394,19 +1043,22 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
 }
 </style>
 
+<div id="login-screen">
+  <div id="login-card">
+    <p id="login-title">our bucket list</p>
+    <p id="login-sub">sign in to see our dreams</p>
+    <input id="login-username" type="text" placeholder="username" />
+    <input id="login-password" type="password" placeholder="password" />
+    <button id="login-btn">enter ♡</button>
+    <p id="login-error"></p>
+    <a href="index.html" id="login-back">← back</a>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  updateDoc,
-  doc,
-  orderBy,
-  query
-} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCc2BHnL7JKAi8N9HSjsWYV35e3YtWTjxU",
@@ -419,6 +1071,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentFilter = 'all';
+let editingId = null;
+let allItems = [];
+
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@bucket.local`;
+}
 
 function escapeHtml(str) {
   return String(str)
@@ -429,6 +1090,18 @@ function escapeHtml(str) {
     .replaceAll("'", '&#039;');
 }
 
+function matchesFilter(item) {
+  if (currentFilter === 'done') return !!item.done;
+  if (currentFilter === 'todo') return !item.done;
+  return true;
+}
+
+function setActiveFilterButton() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === currentFilter);
+  });
+}
+
 async function loadItems() {
   document.getElementById('loading-state').style.display = 'block';
   document.getElementById('empty-state').style.display = 'none';
@@ -437,66 +1110,85 @@ async function loadItems() {
   try {
     const q = query(collection(db, 'bucketList'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
-
+    allItems = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
     document.getElementById('loading-state').style.display = 'none';
-
-    if (snapshot.empty) {
-      document.getElementById('empty-state').style.display = 'block';
-      return;
-    }
-
-    const grid = document.getElementById('bucket-grid');
-    snapshot.forEach(docSnap => renderCard(grid, docSnap.id, docSnap.data()));
+    renderItems();
   } catch (err) {
-    document.getElementById('loading-state').innerHTML =
-      '<p style="color:rgba(255,140,140,0.45);font-size:12px;letter-spacing:0.1em;">could not load — check firestore rules</p>';
+    document.getElementById('loading-state').innerHTML = '<p style="color:rgba(255,140,140,0.45);font-size:12px;letter-spacing:0.1em;">could not load — not signed in or rules blocked</p>';
     console.error(err);
   }
 }
 
-function renderCard(grid, id, item) {
-  const card = document.createElement('div');
-  card.className = `bucket-card ${item.done ? 'done' : ''}`;
+function renderItems() {
+  const grid = document.getElementById('bucket-grid');
+  const empty = document.getElementById('empty-state');
+  grid.innerHTML = '';
+  setActiveFilterButton();
 
-  card.innerHTML = `
-    <div class="bucket-top">
-      <p class="bucket-title">${escapeHtml(item.title || 'untitled')}</p>
-      <input class="bucket-check" type="checkbox" ${item.done ? 'checked' : ''} />
-    </div>
-    ${item.category ? `<p class="bucket-category">${escapeHtml(item.category)}</p>` : ''}
-    ${item.note ? `<p class="bucket-note">${escapeHtml(item.note)}</p>` : ''}
-    <div class="bucket-meta">
-      <p class="bucket-status">${item.done ? 'done ♡' : 'still to do'}</p>
-      <button class="bucket-delete">remove</button>
-    </div>
-  `;
+  const visibleItems = allItems.filter(matchesFilter);
 
-  card.querySelector('.bucket-check').addEventListener('change', async (e) => {
-    try {
-      await updateDoc(doc(db, 'bucketList', id), {
-        done: e.target.checked
-      });
-      loadItems();
-    } catch (err) {
-      console.error(err);
-      alert('Could not update item.');
-    }
-  });
+  if (!visibleItems.length) {
+    empty.style.display = 'block';
+    return;
+  }
 
-  card.querySelector('.bucket-delete').addEventListener('click', async () => {
-    try {
-      await deleteDoc(doc(db, 'bucketList', id));
-      card.remove();
-      if (!document.getElementById('bucket-grid').children.length) {
-        document.getElementById('empty-state').style.display = 'block';
+  empty.style.display = 'none';
+
+  visibleItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = `bucket-card ${item.done ? 'done' : ''}`;
+    card.innerHTML = `
+      <div class="bucket-top">
+        <div class="bucket-title-wrap">
+          <span class="bucket-heart">♡</span>
+          <p class="bucket-title">${escapeHtml(item.title || 'untitled')}</p>
+        </div>
+        <input class="bucket-check" type="checkbox" ${item.done ? 'checked' : ''} />
+      </div>
+      ${item.category ? `<p class="bucket-category">${escapeHtml(item.category)}</p>` : ''}
+      ${item.note ? `<p class="bucket-note">${escapeHtml(item.note)}</p>` : ''}
+      <div class="bucket-meta">
+        <p class="bucket-status">${item.done ? 'done ♡' : 'still to do'}</p>
+        <div class="bucket-actions">
+          <button class="bucket-action bucket-edit">edit</button>
+          <button class="bucket-action bucket-delete">remove</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('.bucket-check').addEventListener('change', async (e) => {
+      try {
+        await updateDoc(doc(db, 'bucketList', item.id), { done: e.target.checked });
+        await loadItems();
+      } catch (err) {
+        console.error(err);
+        alert('Could not update item.');
       }
-    } catch (err) {
-      console.error(err);
-      alert('Could not remove item.');
-    }
-  });
+    });
 
-  grid.appendChild(card);
+    card.querySelector('.bucket-edit').addEventListener('click', () => {
+      editingId = item.id;
+      document.getElementById('modal-title').textContent = 'edit bucket item';
+      document.getElementById('inp-title').value = item.title || '';
+      document.getElementById('inp-category').value = item.category || '';
+      document.getElementById('inp-note').value = item.note || '';
+      document.getElementById('save-btn').textContent = 'save ♡';
+      document.getElementById('save-btn').disabled = false;
+      document.getElementById('modal-overlay').classList.add('open');
+    });
+
+    card.querySelector('.bucket-delete').addEventListener('click', async () => {
+      try {
+        await deleteDoc(doc(db, 'bucketList', item.id));
+        await loadItems();
+      } catch (err) {
+        console.error(err);
+        alert('Could not remove item.');
+      }
+    });
+
+    grid.appendChild(card);
+  });
 }
 
 window.saveItem = async function() {
@@ -514,26 +1206,31 @@ window.saveItem = async function() {
   saveBtn.textContent = 'saving...';
 
   try {
-    await addDoc(collection(db, 'bucketList'), {
-      title,
-      category,
-      note,
-      done: false,
-      createdAt: Date.now()
-    });
+    if (editingId) {
+      await updateDoc(doc(db, 'bucketList', editingId), { title, category, note });
+    } else {
+      await addDoc(collection(db, 'bucketList'), {
+        title,
+        category,
+        note,
+        done: false,
+        createdAt: Date.now()
+      });
+    }
 
-    document.getElementById('modal-overlay').classList.remove('open');
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'save ♡';
-    loadItems();
+    closeModal();
+    await loadItems();
   } catch (err) {
+    console.error(err);
+    alert('Something went wrong: ' + err.message);
     saveBtn.disabled = false;
     saveBtn.textContent = 'save ♡';
-    alert('Something went wrong: ' + err.message);
   }
 };
 
 window.openModal = function() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'add to our bucket list';
   document.getElementById('inp-title').value = '';
   document.getElementById('inp-category').value = '';
   document.getElementById('inp-note').value = '';
@@ -544,11 +1241,70 @@ window.openModal = function() {
 
 window.closeModal = function(e) {
   if (!e || e.target === document.getElementById('modal-overlay')) {
+    editingId = null;
     document.getElementById('modal-overlay').classList.remove('open');
+    document.getElementById('save-btn').disabled = false;
+    document.getElementById('save-btn').textContent = 'save ♡';
   }
 };
 
-loadItems();
+function ensureLogoutButton() {
+  if (document.getElementById('logout-btn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'logout-btn';
+  btn.textContent = 'logout';
+  btn.addEventListener('click', async () => {
+    await signOut(auth);
+  });
+  document.body.appendChild(btn);
+}
+
+async function loginUser() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const error = document.getElementById('login-error');
+  error.textContent = '';
+
+  if (!username || !password) {
+    error.textContent = 'fill in username and password';
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+  } catch (err) {
+    error.textContent = 'login failed';
+    console.error(err);
+  }
+}
+
+document.getElementById('login-btn').addEventListener('click', loginUser);
+document.getElementById('login-password').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loginUser();
+});
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentFilter = btn.dataset.filter;
+    renderItems();
+  });
+});
+
+onAuthStateChanged(auth, (user) => {
+  const loginScreen = document.getElementById('login-screen');
+  const stage = document.getElementById('stage');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  if (user) {
+    loginScreen.style.display = 'none';
+    stage.style.visibility = 'visible';
+    ensureLogoutButton();
+    loadItems();
+  } else {
+    loginScreen.style.display = 'flex';
+    stage.style.visibility = 'hidden';
+    if (logoutBtn) logoutBtn.remove();
+  }
+});
 </script>
 
 <script>
@@ -575,14 +1331,9 @@ loadItems();
   }
 
   let t = 0;
-
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const grad = ctx.createRadialGradient(
-      canvas.width * .5, canvas.height * .3, 0,
-      canvas.width * .5, canvas.height * .3, canvas.width * .6
-    );
+    const grad = ctx.createRadialGradient(canvas.width * .5, canvas.height * .3, 0, canvas.width * .5, canvas.height * .3, canvas.width * .6);
     grad.addColorStop(0, 'rgba(20,35,72,0.5)');
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
@@ -608,3 +1359,5 @@ loadItems();
 
 </body>
 </html>
+EOF
+ls -l /mnt/data/dates_secure.html /mnt/data/bucket_secure.html
