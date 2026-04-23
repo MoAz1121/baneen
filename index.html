@@ -89,7 +89,6 @@
   }
 
   .home-link:active { transform: translateY(0); }
-
   .home-link span { opacity: 0.35; font-size: 11px; }
 
   .home-since {
@@ -98,6 +97,60 @@
     color: rgba(180, 200, 235, 0.22);
     margin-top: 36px;
   }
+
+  #lock {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; background: #0b0f1e;
+    transition: opacity 0.8s ease;
+  }
+
+  #lock.fade-away { opacity: 0; pointer-events: none; }
+
+  #lock-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300; font-style: italic;
+    font-size: clamp(13px, 2.8vw, 16px);
+    letter-spacing: 0.32em;
+    color: rgba(180, 205, 255, 0.38);
+  }
+
+  #lock-input {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(180,210,255,0.15);
+    border-radius: 40px;
+    padding: 12px 28px;
+    color: #c8d8f8;
+    font-family: 'Jost', sans-serif;
+    font-weight: 300; font-size: 18px;
+    letter-spacing: 0.3em;
+    text-align: center; outline: none; width: 180px;
+    transition: border-color 0.2s ease;
+    -webkit-text-security: disc;
+  }
+
+  #lock-input:focus { border-color: rgba(180,210,255,0.4); }
+
+  #lock-input.wrong {
+    border-color: rgba(255,120,120,0.5);
+    animation: shake 0.3s ease;
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  #lock-hint {
+    font-family: 'Jost', sans-serif;
+    font-weight: 300; font-size: 10px;
+    letter-spacing: 0.2em; text-transform: lowercase;
+    color: rgba(160,185,230,0.0);
+    transition: color 0.4s ease;
+  }
+
+  #lock-hint.show { color: rgba(255,120,120,0.45); }
 
   @media (max-width: 400px) {
     .home-card { padding: 40px 28px 40px; }
@@ -109,7 +162,13 @@
 <canvas id="sky"></canvas>
 <canvas id="particles"></canvas>
 
-<div id="intro">
+<div id="lock">
+  <p id="lock-title">enter code</p>
+  <input id="lock-input" type="tel" maxlength="6" autocomplete="off" inputmode="numeric" />
+  <p id="lock-hint">incorrect</p>
+</div>
+
+<div id="intro" style="display:none">
   <div id="name-wrap">
     <span class="b-letter" data-i="0">B</span>
     <span class="b-letter" data-i="1">a</span>
@@ -132,6 +191,7 @@
       <a href="typewriter.html" class="home-link">a letter for you <span>→</span></a>
       <a href="body.html" class="home-link">every part of you <span>→</span></a>
       <a href="dates.html" class="home-link">our dates <span>→</span></a>
+      <a href="reassurance.html" class="home-link">for when you doubt it <span>→</span></a>
     </div>
     <p class="home-since">since 26.03.2026</p>
   </div>
@@ -139,7 +199,40 @@
 
 <script src="script.js"></script>
 <script>
+  const HASH = '73be97dcba3ebf4f46b178a73fdc3d32755a2c178add5b069f42c3e39ecfa521';
+  const lockEl = document.getElementById('lock');
+  const lockInput = document.getElementById('lock-input');
+  const lockHint = document.getElementById('lock-hint');
   const homeScene = document.getElementById('homeScene');
+
+  async function hashInput(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  lockInput.focus();
+
+  lockInput.addEventListener('input', async () => {
+    lockHint.classList.remove('show');
+    lockInput.classList.remove('wrong');
+    if (lockInput.value.length < 6) return;
+    const h = await hashInput(lockInput.value);
+    if (h === HASH) {
+      lockEl.classList.add('fade-away');
+      setTimeout(() => {
+        lockEl.style.display = 'none';
+        document.getElementById('intro').style.display = '';
+        setTimeout(playIntro, 400);
+      }, 800);
+    } else {
+      lockInput.classList.add('wrong');
+      lockHint.classList.add('show');
+      setTimeout(() => {
+        lockInput.value = '';
+        lockInput.classList.remove('wrong');
+      }, 600);
+    }
+  });
 
   intro.addEventListener('click', () => {
     if (!introPlayed) { playIntro(); return; }
