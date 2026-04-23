@@ -283,7 +283,7 @@
 
 <button id="logout-btn">logout</button>
 
-<div id="intro" style="display:none">
+<div id="intro" style="display:none" onclick="finishIntro()">
   <div id="name-wrap">
     <span class="b-letter" data-i="0">B</span>
     <span class="b-letter" data-i="1">a</span>
@@ -424,9 +424,10 @@ onAuthStateChanged(auth, (user) => {
 </script>
 
 <script>
-  const introEl = document.getElementById('intro');
+  function finishIntro() {
+    const introEl = document.getElementById('intro');
+    const homeSceneEl = document.getElementById('homeScene');
 
-  introEl.addEventListener('click', () => {
     if (!window.introPlayed) {
       if (typeof window.playIntro === 'function') {
         window.playIntro();
@@ -446,9 +447,9 @@ onAuthStateChanged(auth, (user) => {
 
     setTimeout(() => {
       introEl.style.display = 'none';
-      document.getElementById('homeScene').classList.add('visible');
+      homeSceneEl.classList.add('visible');
     }, 1200);
-  });
+  }
 </script>
 
 </body>
