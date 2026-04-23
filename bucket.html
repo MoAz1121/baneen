@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>our bucket list</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>our bucket list</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -18,6 +18,7 @@
 
   <button id="add-btn" onclick="openModal()">+ add a dream</button>
 
+  <div id="loading-state"><p>loading our dreams...</p></div>
   <div id="bucket-grid"></div>
 
   <div id="empty-state">
@@ -44,12 +45,12 @@
 
     <div class="field">
       <label>note</label>
-      <textarea id="inp-note" placeholder="why this matters, where, when..."></textarea>
+      <textarea id="inp-note" placeholder="what makes this special..."></textarea>
     </div>
 
     <div id="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">cancel</button>
-      <button class="btn-save" onclick="saveItem()">save ♡</button>
+      <button class="btn-save" id="save-btn" onclick="saveItem()">save ♡</button>
     </div>
   </div>
 </div>
@@ -112,6 +113,15 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   background: rgba(140,180,255,0.06);
 }
 
+#loading-state {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 18px;
+  color: rgba(160,185,230,0.25);
+  margin-top: 40px;
+}
+
 #bucket-grid {
   width: 100%;
   max-width: 900px;
@@ -131,6 +141,16 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
 .bucket-card:hover {
   border-color: rgba(180,210,255,0.3);
   transform: translateY(-3px);
+}
+
+.bucket-card.done {
+  opacity: 0.66;
+  border-color: rgba(160,220,180,0.16);
+}
+
+.bucket-card.done .bucket-title {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .bucket-top {
@@ -156,6 +176,7 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   accent-color: #9ebdf0;
   cursor: pointer;
   margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .bucket-category {
@@ -179,6 +200,7 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   justify-content: space-between;
   align-items: center;
   margin-top: 16px;
+  gap: 12px;
 }
 
 .bucket-status {
@@ -202,16 +224,6 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
 
 .bucket-delete:hover {
   color: rgba(255,140,140,0.55);
-}
-
-.bucket-card.done {
-  opacity: 0.65;
-  border-color: rgba(160,220,180,0.18);
-}
-
-.bucket-card.done .bucket-title {
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
 }
 
 #empty-state {
@@ -371,180 +383,228 @@ canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-event
   background: rgba(140,180,255,0.18);
 }
 
+.btn-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 @media (max-width: 540px) {
   #bucket-grid { grid-template-columns: 1fr; }
   #modal { padding: 24px 20px; }
 }
 </style>
 
-<script>
-  const STORAGE_KEY = 'baneen_bucket_list';
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  updateDoc,
+  doc,
+  orderBy,
+  query
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
 
-  function getItems() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  }
+const firebaseConfig = {
+  apiKey: "AIzaSyCc2BHnL7JKAi8N9HSjsWYV35e3YtWTjxU",
+  authDomain: "baneen-2f47c.firebaseapp.com",
+  projectId: "baneen-2f47c",
+  storageBucket: "baneen-2f47c.firebasestorage.app",
+  messagingSenderId: "955214840494",
+  appId: "1:955214840494:web:9c41429a87943cb7ae633f"
+};
 
-  function setItems(items) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  function openModal() {
-    document.getElementById('modal-overlay').classList.add('open');
-  }
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
 
-  function closeModal(e) {
-    if (!e || e.target.id === 'modal-overlay') {
-      document.getElementById('modal-overlay').classList.remove('open');
-    }
-  }
+async function loadItems() {
+  document.getElementById('loading-state').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('bucket-grid').innerHTML = '';
 
-  function saveItem() {
-    const title = document.getElementById('inp-title').value.trim();
-    const category = document.getElementById('inp-category').value.trim();
-    const note = document.getElementById('inp-note').value.trim();
+  try {
+    const q = query(collection(db, 'bucketList'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
 
-    if (!title) return;
+    document.getElementById('loading-state').style.display = 'none';
 
-    const items = getItems();
-    items.unshift({
-      id: Date.now(),
-      title,
-      category,
-      note,
-      done: false
-    });
-
-    setItems(items);
-    clearForm();
-    closeModal();
-    renderItems();
-  }
-
-  function clearForm() {
-    document.getElementById('inp-title').value = '';
-    document.getElementById('inp-category').value = '';
-    document.getElementById('inp-note').value = '';
-  }
-
-  function toggleDone(id) {
-    const items = getItems().map(item =>
-      item.id === id ? { ...item, done: !item.done } : item
-    );
-    setItems(items);
-    renderItems();
-  }
-
-  function deleteItem(id) {
-    const items = getItems().filter(item => item.id !== id);
-    setItems(items);
-    renderItems();
-  }
-
-  function renderItems() {
-    const grid = document.getElementById('bucket-grid');
-    const empty = document.getElementById('empty-state');
-    const items = getItems();
-
-    grid.innerHTML = '';
-
-    if (items.length === 0) {
-      empty.style.display = 'block';
+    if (snapshot.empty) {
+      document.getElementById('empty-state').style.display = 'block';
       return;
     }
 
-    empty.style.display = 'none';
+    const grid = document.getElementById('bucket-grid');
+    snapshot.forEach(docSnap => renderCard(grid, docSnap.id, docSnap.data()));
+  } catch (err) {
+    document.getElementById('loading-state').innerHTML =
+      '<p style="color:rgba(255,140,140,0.45);font-size:12px;letter-spacing:0.1em;">could not load — check firestore rules</p>';
+    console.error(err);
+  }
+}
 
-    items.forEach(item => {
-      const card = document.createElement('div');
-      card.className = `bucket-card ${item.done ? 'done' : ''}`;
+function renderCard(grid, id, item) {
+  const card = document.createElement('div');
+  card.className = `bucket-card ${item.done ? 'done' : ''}`;
 
-      card.innerHTML = `
-        <div class="bucket-top">
-          <p class="bucket-title">${escapeHtml(item.title)}</p>
-          <input class="bucket-check" type="checkbox" ${item.done ? 'checked' : ''} />
-        </div>
-        ${item.category ? `<p class="bucket-category">${escapeHtml(item.category)}</p>` : ''}
-        ${item.note ? `<p class="bucket-note">${escapeHtml(item.note)}</p>` : ''}
-        <div class="bucket-meta">
-          <p class="bucket-status">${item.done ? 'done ♡' : 'still to do'}</p>
-          <button class="bucket-delete">remove</button>
-        </div>
-      `;
+  card.innerHTML = `
+    <div class="bucket-top">
+      <p class="bucket-title">${escapeHtml(item.title || 'untitled')}</p>
+      <input class="bucket-check" type="checkbox" ${item.done ? 'checked' : ''} />
+    </div>
+    ${item.category ? `<p class="bucket-category">${escapeHtml(item.category)}</p>` : ''}
+    ${item.note ? `<p class="bucket-note">${escapeHtml(item.note)}</p>` : ''}
+    <div class="bucket-meta">
+      <p class="bucket-status">${item.done ? 'done ♡' : 'still to do'}</p>
+      <button class="bucket-delete">remove</button>
+    </div>
+  `;
 
-      card.querySelector('.bucket-check').addEventListener('change', () => toggleDone(item.id));
-      card.querySelector('.bucket-delete').addEventListener('click', () => deleteItem(item.id));
+  card.querySelector('.bucket-check').addEventListener('change', async (e) => {
+    try {
+      await updateDoc(doc(db, 'bucketList', id), {
+        done: e.target.checked
+      });
+      loadItems();
+    } catch (err) {
+      console.error(err);
+      alert('Could not update item.');
+    }
+  });
 
-      grid.appendChild(card);
+  card.querySelector('.bucket-delete').addEventListener('click', async () => {
+    try {
+      await deleteDoc(doc(db, 'bucketList', id));
+      card.remove();
+      if (!document.getElementById('bucket-grid').children.length) {
+        document.getElementById('empty-state').style.display = 'block';
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Could not remove item.');
+    }
+  });
+
+  grid.appendChild(card);
+}
+
+window.saveItem = async function() {
+  const title = document.getElementById('inp-title').value.trim();
+  const category = document.getElementById('inp-category').value.trim();
+  const note = document.getElementById('inp-note').value.trim();
+
+  if (!title) {
+    document.getElementById('inp-title').focus();
+    return;
+  }
+
+  const saveBtn = document.getElementById('save-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'saving...';
+
+  try {
+    await addDoc(collection(db, 'bucketList'), {
+      title,
+      category,
+      note,
+      done: false,
+      createdAt: Date.now()
     });
+
+    document.getElementById('modal-overlay').classList.remove('open');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    loadItems();
+  } catch (err) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'save ♡';
+    alert('Something went wrong: ' + err.message);
   }
+};
 
-  function escapeHtml(str) {
-    return str
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+window.openModal = function() {
+  document.getElementById('inp-title').value = '';
+  document.getElementById('inp-category').value = '';
+  document.getElementById('inp-note').value = '';
+  document.getElementById('save-btn').disabled = false;
+  document.getElementById('save-btn').textContent = 'save ♡';
+  document.getElementById('modal-overlay').classList.add('open');
+};
+
+window.closeModal = function(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
   }
+};
 
-  // simple sky background
-  (function drawSky() {
-    const canvas = document.getElementById('sky');
-    const ctx = canvas.getContext('2d');
-    let stars = [];
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      buildStars();
-    }
-
-    function buildStars() {
-      stars = [];
-      const count = Math.floor((canvas.width * canvas.height) / 9000);
-      for (let i = 0; i < count; i++) {
-        stars.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          r: Math.random() * 0.9 + 0.2,
-          a: Math.random() * 0.55 + 0.1,
-          speed: Math.random() * 0.004 + 0.001,
-          phase: Math.random() * Math.PI * 2
-        });
-      }
-    }
-
-    let t = 0;
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const grad = ctx.createRadialGradient(
-        canvas.width * 0.5, canvas.height * 0.35, 0,
-        canvas.width * 0.5, canvas.height * 0.35, canvas.width * 0.65
-      );
-      grad.addColorStop(0, 'rgba(20, 35, 72, 0.55)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (const s of stars) {
-        const alpha = s.a * (0.6 + 0.4 * Math.sin(t * s.speed * 60 + s.phase));
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`;
-        ctx.fill();
-      }
-
-      t += 0.016;
-      requestAnimationFrame(draw);
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-    draw();
-  })();
-
-  renderItems();
+loadItems();
 </script>
+
+<script>
+(function() {
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    stars = [];
+    const count = Math.floor(canvas.width * canvas.height / 7000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 0.9 + 0.2,
+        a: Math.random() * 0.55 + 0.1,
+        speed: Math.random() * 0.004 + 0.001,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  let t = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const grad = ctx.createRadialGradient(
+      canvas.width * .5, canvas.height * .3, 0,
+      canvas.width * .5, canvas.height * .3, canvas.width * .6
+    );
+    grad.addColorStop(0, 'rgba(20,35,72,0.5)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for (const s of stars) {
+      const alpha = s.a * (0.6 + 0.4 * Math.sin(t * s.speed * 60 + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,220,255,${alpha})`;
+      ctx.fill();
+    }
+
+    t += 0.016;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+</script>
+
 </body>
 </html>
