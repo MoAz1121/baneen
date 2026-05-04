@@ -18,10 +18,8 @@ html, body {
   cursor: none;
 }
 
-/* ── Custom cursor ── */
 #cursor {
   position: fixed;
-  width: 18px; height: 18px;
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
@@ -31,25 +29,21 @@ html, body {
 }
 #cursor.pressed { transform: translate(-50%, -50%) scale(1.6); }
 
-/* ── Canvases ── */
 canvas {
   position: fixed; inset: 0;
   width: 100%; height: 100%;
   pointer-events: none;
 }
-#sky   { z-index: 0; }
-#fx    { z-index: 2; }
+#sky { z-index: 0; }
+#fx  { z-index: 2; }
 
-/* ── Stage ── */
 #stage {
   position: fixed; inset: 0; z-index: 5;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 0;
   visibility: hidden;
 }
 
-/* ── Top label ── */
 #top-label {
   font-family: 'Jost', sans-serif;
   font-weight: 300; font-size: 10px;
@@ -60,14 +54,13 @@ canvas {
   animation: fadeUp 1.2s ease 0.4s forwards;
 }
 
-/* ── Counter ── */
 #counter-wrap {
-  position: relative;
   display: flex; flex-direction: column;
   align-items: center;
   margin-bottom: 56px;
 }
 
+/* FIX: geen opacity in bump, aparte klasse voor zichtbaarheid */
 #count-number {
   font-family: 'Cormorant Garamond', serif;
   font-weight: 300;
@@ -78,19 +71,20 @@ canvas {
   text-shadow:
     0 0 60px rgba(255, 150, 190, 0.35),
     0 0 120px rgba(255, 120, 170, 0.15);
-  transition: transform 0.08s ease;
   user-select: none;
-  animation: fadeUp 1s ease 0.7s both;
+  opacity: 0;
+  animation: fadeUp 1s ease 0.7s forwards;
 }
 
+/* FIX: bump doet alleen transform, raakt opacity niet aan */
 #count-number.bump {
   animation: bump 0.22s ease forwards;
 }
 
 @keyframes bump {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.08); }
-  100% { transform: scale(1); }
+  0%   { transform: scale(1);    opacity: 1; }
+  40%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
 }
 
 #count-sub {
@@ -100,10 +94,10 @@ canvas {
   letter-spacing: 0.12em;
   color: rgba(255, 180, 210, 0.38);
   margin-top: 14px;
-  animation: fadeUp 1s ease 1s both;
+  opacity: 0;
+  animation: fadeUp 1s ease 1s forwards;
 }
 
-/* ── Kiss button ── */
 #kiss-btn {
   position: relative;
   width: clamp(160px, 38vw, 210px);
@@ -126,7 +120,6 @@ canvas {
   transition: transform 0.1s ease;
 }
 
-/* Outer ring */
 #kiss-btn::before {
   content: '';
   position: absolute; inset: -2px;
@@ -135,7 +128,6 @@ canvas {
   animation: ringPulse 3s ease-in-out infinite;
 }
 
-/* Middle ring */
 #kiss-btn::after {
   content: '';
   position: absolute; inset: -18px;
@@ -173,19 +165,14 @@ canvas {
   color: rgba(255, 170, 200, 0.3);
   pointer-events: none;
   user-select: none;
-  transition: opacity 0.3s ease;
 }
 
-#kiss-btn:active {
-  transform: scale(0.94);
-}
-
+#kiss-btn:active { transform: scale(0.94); }
 #kiss-btn:active #kiss-icon {
   transform: scale(1.15);
   filter: drop-shadow(0 0 28px rgba(255, 100, 160, 0.8));
 }
 
-/* ── Milestone toast ── */
 #milestone {
   position: fixed;
   top: 50%; left: 50%;
@@ -226,12 +213,10 @@ canvas {
 }
 #milestone-close:hover { color: rgba(255, 190, 215, 0.7); }
 
-/* ── Floating kiss emojis ── */
 .float-kiss {
   position: fixed;
   pointer-events: none;
   z-index: 10;
-  font-size: 22px;
   animation: floatUp 1.8s ease forwards;
   user-select: none;
 }
@@ -242,23 +227,27 @@ canvas {
   100% { opacity: 0; transform: translateY(-140px) scale(0.4) rotate(25deg); }
 }
 
-/* ── Reset btn ── */
+/* FIX: reset knop iets meer zichtbaar */
 #reset-btn {
   position: fixed;
-  bottom: 28px; right: 24px;
-  background: none; border: none;
+  bottom: 26px; right: 24px;
+  background: none;
+  border: 1px solid rgba(255, 170, 200, 0.15);
+  border-radius: 20px;
+  padding: 5px 12px;
   font-family: 'Jost', sans-serif;
   font-weight: 300; font-size: 9px;
   letter-spacing: 0.22em; text-transform: lowercase;
-  color: rgba(255, 170, 200, 0.12);
+  color: rgba(255, 170, 200, 0.3);
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: color 0.3s ease, border-color 0.3s ease;
   z-index: 20;
-  padding: 4px;
 }
-#reset-btn:hover { color: rgba(255, 140, 170, 0.4); }
+#reset-btn:hover {
+  color: rgba(255, 140, 170, 0.7);
+  border-color: rgba(255, 140, 170, 0.35);
+}
 
-/* ── Back link ── */
 #back-link {
   position: fixed; bottom: 28px; left: 50%;
   transform: translateX(-50%);
@@ -273,23 +262,18 @@ canvas {
 }
 #back-link:hover { color: rgba(255, 200, 220, 0.6); }
 
-/* ── Shared fade ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Heartbeat glow on bg ── */
 #heartbeat-glow {
   position: fixed;
   width: 600px; height: 600px;
   border-radius: 50%;
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle,
-    rgba(255, 100, 150, 0.06) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(255, 100, 150, 0.06) 0%, transparent 70%);
   pointer-events: none;
   z-index: 1;
   animation: heartbeatGlow 2.4s ease-in-out infinite;
@@ -303,7 +287,6 @@ canvas {
   56%  { transform: translate(-50%, -50%) scale(1); }
 }
 
-/* ── Tap ripple ── */
 .tap-ripple {
   position: fixed;
   border-radius: 50%;
@@ -328,12 +311,10 @@ canvas {
 
 <div id="stage">
   <p id="top-label">for my princess ♡</p>
-
   <div id="counter-wrap">
     <p id="count-number">0</p>
     <p id="count-sub">kisses sent to you</p>
   </div>
-
   <button id="kiss-btn" onclick="sendKiss(event)">
     <div class="outer-ring"></div>
     <span id="kiss-icon">💋</span>
@@ -368,7 +349,6 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const auth = getAuth(app);
 
-// ── Auth guard ──────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = 'index.html';
@@ -378,7 +358,6 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// ── Milestones ──────────────────────────────────────────────
 const milestones = {
   1:    { emoji: '💋', text: 'The very first kiss… I truly hope that there will be millions more my cutie' },
   10:   { emoji: '🥰', text: 'Ten kisses already. You are so cute for doing this baby' },
@@ -393,7 +372,6 @@ const milestones = {
 let currentCount = 0;
 let isAnimating = false;
 
-// ── Load count ──────────────────────────────────────────────
 async function loadCount() {
   try {
     const snap = await getDoc(doc(db, 'meta', 'kisses'));
@@ -407,11 +385,9 @@ async function loadCount() {
   }
 }
 
-// ── Animated number roll ────────────────────────────────────
-function animateCounterTo(target, animate = true) {
+// FIX: bump animatie behoudt opacity 1, counter blijft zichtbaar
+function bumpCounter(target) {
   const el = document.getElementById('count-number');
-  if (!animate) { el.textContent = target; return; }
-
   const start = currentCount - 1;
   const duration = 280;
   const startTime = performance.now();
@@ -423,40 +399,38 @@ function animateCounterTo(target, animate = true) {
     if (p < 1) requestAnimationFrame(step);
     else el.textContent = target;
   }
-
   requestAnimationFrame(step);
-  el.classList.remove('bump');
-  void el.offsetWidth;
-  el.classList.add('bump');
+
+  // bump via inline style zodat het geen conflict geeft met fadeUp
+  el.style.transform = 'scale(1.08)';
+  setTimeout(() => { el.style.transform = 'scale(1)'; el.style.transition = 'transform 0.18s ease'; }, 80);
+  setTimeout(() => { el.style.transition = ''; }, 280);
 }
 
-// ── Update sub text ─────────────────────────────────────────
 function updateSub(count) {
   const el = document.getElementById('count-sub');
-  if (count === 1) el.textContent = 'first kiss ♡';
-  else if (count < 10) el.textContent = 'kisses sent to you';
-  else if (count < 100) el.textContent = 'kisses and counting...';
-  else if (count < 500) el.textContent = 'kisses, and i want more';
-  else el.textContent = 'kisses. you are obsessed ♡';
+  if (count === 0)        el.textContent = 'kisses sent to you';
+  else if (count === 1)   el.textContent = 'first kiss ♡';
+  else if (count < 10)    el.textContent = 'kisses sent to you';
+  else if (count < 100)   el.textContent = 'kisses and counting...';
+  else if (count < 500)   el.textContent = 'kisses, and i want more';
+  else                    el.textContent = 'kisses. you are obsessed ♡';
 }
 
-// ── Send kiss ───────────────────────────────────────────────
 window.sendKiss = async function(e) {
   if (isAnimating) return;
   isAnimating = true;
 
   currentCount++;
-  animateCounterTo(currentCount, true);
+  bumpCounter(currentCount);
   updateSub(currentCount);
 
-  // Floating kiss emojis from tap position
   const x = e.clientX || window.innerWidth / 2;
   const y = e.clientY || window.innerHeight / 2;
   spawnFloatingKisses(x, y);
   spawnRipple(x, y);
   spawnParticleBurst(x, y);
 
-  // Check milestone
   if (milestones[currentCount]) {
     setTimeout(() => showMilestone(milestones[currentCount]), 500);
   }
@@ -470,7 +444,6 @@ window.sendKiss = async function(e) {
   setTimeout(() => { isAnimating = false; }, 150);
 };
 
-// ── Floating kisses ─────────────────────────────────────────
 const kissEmojis = ['💋', '💋', '💋', '♡', '💗', '💕'];
 
 function spawnFloatingKisses(x, y) {
@@ -490,7 +463,6 @@ function spawnFloatingKisses(x, y) {
   }
 }
 
-// ── Ripple ──────────────────────────────────────────────────
 function spawnRipple(x, y) {
   const el = document.createElement('div');
   el.className = 'tap-ripple';
@@ -502,7 +474,6 @@ function spawnRipple(x, y) {
   setTimeout(() => el.remove(), 800);
 }
 
-// ── Canvas particles ────────────────────────────────────────
 const fxCanvas = document.getElementById('fx');
 const fxCtx = fxCanvas.getContext('2d');
 let particles = [];
@@ -543,7 +514,6 @@ function animParticles() {
   pFrame = particles.length > 0 ? requestAnimationFrame(animParticles) : null;
 }
 
-// ── Reset ────────────────────────────────────────────────────
 window.resetCount = async function() {
   if (!confirm('reset the kiss counter to 0?')) return;
   try {
@@ -556,7 +526,6 @@ window.resetCount = async function() {
   }
 };
 
-// ── Milestone ───────────────────────────────────────────────
 window.showMilestone = function(m) {
   document.getElementById('milestone-emoji').textContent = m.emoji;
   document.getElementById('milestone-text').textContent = m.text;
@@ -567,7 +536,6 @@ window.closeMilestone = function() {
   document.getElementById('milestone').classList.remove('show');
 };
 
-// ── Custom cursor ────────────────────────────────────────────
 const cursor = document.getElementById('cursor');
 document.addEventListener('mousemove', e => {
   cursor.style.left = e.clientX + 'px';
@@ -576,7 +544,6 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mousedown', () => cursor.classList.add('pressed'));
 document.addEventListener('mouseup',   () => cursor.classList.remove('pressed'));
 
-// ── Stars ───────────────────────────────────────────────────
 (function() {
   const canvas = document.getElementById('sky');
   const ctx = canvas.getContext('2d');
@@ -593,7 +560,7 @@ document.addEventListener('mouseup',   () => cursor.classList.remove('pressed'))
       a: Math.random() * 0.45 + 0.08,
       speed: Math.random() * 0.003 + 0.001,
       phase: Math.random() * Math.PI * 2,
-      hue: 340 + Math.random() * 40  // pinkish stars
+      hue: 340 + Math.random() * 40
     });
   }
 
@@ -608,7 +575,6 @@ document.addEventListener('mouseup',   () => cursor.classList.remove('pressed'))
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     for (const s of stars) {
       const alpha = s.a * (0.6 + 0.4 * Math.sin(t * s.speed * 60 + s.phase));
       ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
