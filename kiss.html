@@ -80,8 +80,7 @@ canvas {
     0 0 120px rgba(255, 120, 170, 0.15);
   transition: transform 0.08s ease;
   user-select: none;
-  opacity: 0;
-  animation: fadeUp 1s ease 0.7s forwards;
+  animation: fadeUp 1s ease 0.7s both;
 }
 
 #count-number.bump {
@@ -101,8 +100,7 @@ canvas {
   letter-spacing: 0.12em;
   color: rgba(255, 180, 210, 0.38);
   margin-top: 14px;
-  opacity: 0;
-  animation: fadeUp 1s ease 1s forwards;
+  animation: fadeUp 1s ease 1s both;
 }
 
 /* ── Kiss button ── */
@@ -244,6 +242,22 @@ canvas {
   100% { opacity: 0; transform: translateY(-140px) scale(0.4) rotate(25deg); }
 }
 
+/* ── Reset btn ── */
+#reset-btn {
+  position: fixed;
+  bottom: 28px; right: 24px;
+  background: none; border: none;
+  font-family: 'Jost', sans-serif;
+  font-weight: 300; font-size: 9px;
+  letter-spacing: 0.22em; text-transform: lowercase;
+  color: rgba(255, 170, 200, 0.12);
+  cursor: pointer;
+  transition: color 0.3s ease;
+  z-index: 20;
+  padding: 4px;
+}
+#reset-btn:hover { color: rgba(255, 140, 170, 0.4); }
+
 /* ── Back link ── */
 #back-link {
   position: fixed; bottom: 28px; left: 50%;
@@ -334,6 +348,7 @@ canvas {
 </div>
 
 <a href="index.html" id="back-link">← back</a>
+<button id="reset-btn" onclick="resetCount()">reset</button>
 
 <script type="module">
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
@@ -383,9 +398,12 @@ async function loadCount() {
   try {
     const snap = await getDoc(doc(db, 'meta', 'kisses'));
     currentCount = snap.exists() ? (snap.data().count || 0) : 0;
-    animateCounterTo(currentCount, false);
+    document.getElementById('count-number').textContent = currentCount;
+    updateSub(currentCount);
   } catch (e) {
     console.error(e);
+    document.getElementById('count-number').textContent = 0;
+    updateSub(0);
   }
 }
 
@@ -524,6 +542,19 @@ function animParticles() {
   }
   pFrame = particles.length > 0 ? requestAnimationFrame(animParticles) : null;
 }
+
+// ── Reset ────────────────────────────────────────────────────
+window.resetCount = async function() {
+  if (!confirm('reset the kiss counter to 0?')) return;
+  try {
+    await setDoc(doc(db, 'meta', 'kisses'), { count: 0 });
+    currentCount = 0;
+    document.getElementById('count-number').textContent = 0;
+    updateSub(0);
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 // ── Milestone ───────────────────────────────────────────────
 window.showMilestone = function(m) {
